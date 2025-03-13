@@ -26,10 +26,7 @@ influxdb-telegraf-deploy/
 │   └── telegraf.conf      # Generated Telegraf config file
 ├── debug/                 # Debug and test scripts
 │   ├── test_telegraf.sh   # Tests Telegraf functionality
-│   └── test_influxdb.sh   # Tests InfluxDB functionality
-└── mibs/                  # SNMP MIB files
-    ├── IF-MIB.txt         # MIB for network interfaces
-    └── SNMPv2-MIB.txt     # MIB for SNMPv2 objects
+    └── test_influxdb.sh   # Tests InfluxDB functionality
 ```
 
 ## Prerequisites
@@ -117,8 +114,8 @@ This runs additional tests:
 
 Run tests manually:
 ```bash
-sudo ./debug/test_telegraf.sh
-sudo ./debug/test_influxdb.sh
+sudo bash ./debug/test_telegraf.sh
+sudo bash ./debug/test_influxdb.sh
 ```
 
 ## Configuration
@@ -138,13 +135,6 @@ TELEGRAF_PLUGINS=cpu,snmp
 ### SNMP Setup
 - Ensure SNMP devices are accessible (e.g., `172.18.10.2:161`).
 - Customize SNMP configuration in `scripts/config_telegraf.sh` under the `snmp` case (e.g., agents, community string).
-
-### MIB Files
-SNMP requires MIB files, automatically downloaded to `mibs/` during deployment if `snmp` is enabled. To add custom MIBs:
-```bash
-cp your-mib-file.txt mibs/
-sudo chmod 644 mibs/your-mib-file.txt
-```
 
 ## Accessing InfluxDB
 
