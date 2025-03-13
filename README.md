@@ -1,10 +1,3 @@
-Dưới đây là file `README.md` chuyên nghiệp bằng tiếng Anh dành cho dự án `influxdb-telegraf-deploy`. Nội dung được thiết kế rõ ràng, chi tiết và phù hợp để bạn push lên GitHub, bao gồm hướng dẫn cài đặt, cấu hình, sử dụng, và các thông tin cần thiết khác.
-
----
-
-### `README.md`
-
-```markdown
 # InfluxDB and Telegraf Deployment
 
 A professional, modular, and production-ready deployment solution for InfluxDB and Telegraf using Docker Compose. This project automates the setup of a monitoring stack to collect system metrics (e.g., CPU, memory, disk) and SNMP data, store them in InfluxDB, and provides debug scripts to validate the setup.
@@ -20,7 +13,7 @@ A professional, modular, and production-ready deployment solution for InfluxDB a
 
 ## Project Structure
 
-```
+```bash
 influxdb-telegraf-deploy/
 ├── .env                   # Environment variables for configuration
 ├── docker-compose.yml     # Docker Compose service definitions
@@ -51,10 +44,9 @@ influxdb-telegraf-deploy/
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/yourusername/influxdb-telegraf-deploy.git
+   git clone https://https://github.com/zHitz/Collect-Metrics.git
    cd influxdb-telegraf-deploy
    ```
-
 2. **Set Up Permissions**:
    ```bash
    chmod +x scripts/*.sh debug/*.sh
@@ -187,5 +179,5 @@ Feel free to submit issues or pull requests on GitHub. Contributions are welcome
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
-Created with ❤️ by [Your Name] on March 12, 2025
+Created with ❤️ by Hitz on March 12, 2025
 ```
