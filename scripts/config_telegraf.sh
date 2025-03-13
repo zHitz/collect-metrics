@@ -55,19 +55,4 @@ for plugin in "${plugins[@]}"; do
 done
 sudo chmod 644 "$TELEGRAF_CONFIG_DIR/telegraf.conf"
 
-# Tải file MIB nếu dùng SNMP
-if [[ "$TELEGRAF_PLUGINS" =~ "snmp" ]]; then
-    log "Tải file MIB cho SNMP từ GitHub..."
-    MIB_DIR="$(dirname "$0")/../mibs"
-    sudo mkdir -p "$MIB_DIR"
-    sudo wget -O "$MIB_DIR/IF-MIB.txt" "https://raw.githubusercontent.com/net-snmp/net-snmp/master/mibs/IF-MIB.txt"
-    sudo wget -O "$MIB_DIR/SNMPv2-MIB.txt" "https://raw.githubusercontent.com/net-snmp/net-snmp/master/mibs/SNMPv2-MIB.txt"
-    sudo chmod 644 "$MIB_DIR"/*.txt
-    if [ ! -f "$MIB_DIR/IF-MIB.txt" ] || [ ! -f "$MIB_DIR/SNMPv2-MIB.txt" ]; then
-        log "\033[0;31mLỗi: File MIB không tải được. Vui lòng tải thủ công.\033[0m"
-        exit 1
-    fi
-    check_error "Tải file MIB"
-fi
-
 log "\033[0;32mFile cấu hình Telegraf đã tạo tại $TELEGRAF_CONFIG_DIR/telegraf.conf\033[0m"

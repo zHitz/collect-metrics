@@ -1,5 +1,6 @@
 # Dockerfile
-FROM telegraf:1.25.0
+ARG TELEGRAF_VERSION
+FROM telegraf:${TELEGRAF_VERSION}
 
 RUN echo "deb http://deb.debian.org/debian bullseye non-free" >> /etc/apt/sources.list
 

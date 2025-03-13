@@ -23,11 +23,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        TELEGRAF_VERSION: ${TELEGRAF_VERSION} 
     container_name: telegraf
     networks:
       - influxdb-telegraf-net
     volumes:
-      - ${TELEGRAF_CONFIG_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
+      - ${TELEGRAF_CONFIG_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     environment:
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
       - INFLUXDB_ORG=${INFLUXDB_ORG}
