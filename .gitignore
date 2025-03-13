@@ -9,3 +9,5 @@
 /.ssh
 /.wget-hsts
 /script.zip
+/.gitignore
+/Test
