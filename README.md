@@ -175,6 +175,7 @@ TELEGRAF_PLUGINS=cpu,snmp
 - **Add Grafana**: Extend `docker-compose.yml` to include Grafana for visualization.
 - **Custom Plugins**: Modify `scripts/config_telegraf.sh` to support additional Telegraf plugins.
 - **Backup**: Add volume backups for `${INFLUXDB_DATA_DIR}`.
+- **Add Portainer**: Add Portainer to manage Docker for production. 
 
 ## Contributing
 
