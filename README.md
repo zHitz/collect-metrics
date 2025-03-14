@@ -147,7 +147,7 @@ TELEGRAF_PLUGINS=cpu,snmp
 ```
 
 ### 🌐 SNMP Setup
-- Ensure SNMP devices are accessible (e.g., `172.18.10.2:161`).
+- Ensure SNMP devices are accessible (e.g., `172.18.xxx.xxx:161`).
 - Customize SNMP configuration in `scripts/config_telegraf.sh` under the `snmp` case (e.g., agents, community string).
 
 ## 🌐 Accessing InfluxDB
@@ -160,8 +160,7 @@ TELEGRAF_PLUGINS=cpu,snmp
 ## 🐛 Troubleshooting
 
 - **❌ Telegraf SNMP Errors**:
-  - Check `docker logs telegraf` for MIB-related errors.
-  - Verify MIB files in `mibs/` and container (`docker exec -it telegraf ls /usr/share/snmp/mibs`).
+  - Check `docker logs telegraf` for related errors.
 - **🔌 InfluxDB Connection**:
   - Ensure `influxdb` container is running (`docker ps`).
   - Check logs: `docker logs influxdb`.
