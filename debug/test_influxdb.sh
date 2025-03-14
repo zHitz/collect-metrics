@@ -42,11 +42,11 @@ check_error "Danh sách measurements"
 
 # 3. Truy vấn dữ liệu
 log "Truy vấn dữ liệu mẫu từ bucket $INFLUXDB_BUCKET..."
-# docker exec influxdb influx query "from(bucket: \"$INFLUXDB_BUCKET\") |> range(start: -1h) |> limit(n: 1)" \
-#   --host "http://localhost:8086" \
-#   --token "$INFLUXDB_TOKEN" \
-#   --org "$INFLUXDB_ORG"
-# check_error "Dữ liệu mẫu"
+docker exec influxdb influx query "from(bucket: \"$INFLUXDB_BUCKET\") |> range(start: -1h) |> limit(n: 1)" \
+  --host "http://localhost:8086" \
+  --token "$INFLUXDB_TOKEN" \
+  --org "$INFLUXDB_ORG"
+check_error "Dữ liệu mẫu"
 
 # 4. Kiểm tra log InfluxDB
 log "Kiểm tra log InfluxDB..."
