@@ -38,15 +38,10 @@ if [ -z "$PORTAINER_PASSWORD" ]; then
 fi
 
 # --- Tạo thư mục dữ liệu cho Portainer ---
-PORTAINER_DATA_DIR=${PORTAINER_DATA_DIR:-./portainer_data}
+PORTAINER_DATA_DIR=${PORTAINER_DATA_DIR:-/opt/portainer/data}
 mkdir -p "$PORTAINER_DATA_DIR"
 check_error "Không thể tạo thư mục dữ liệu Portainer"
 
-# --- Khởi tạo Docker Swarm nếu chưa có ---
-if ! docker info | grep -q "Swarm: active"; then
-    log "Khởi tạo Docker Swarm..."
-    docker swarm init --advertise-addr $(hostname -i) 2>/dev/null || true
-fi
 
 # --- Gọi các script phụ ---
 BASE_DIR="$(dirname "$0")"
@@ -88,16 +83,16 @@ STACK_CONTENT=$(base64 -w 0 ./stacks/monitoring/docker-compose.yml)
 ENV_CONTENT=$(base64 -w 0 ./stacks/monitoring/.env)
 
 # Tạo Stack qua Portainer API
-curl -s -X POST "http://localhost:9000/api/stacks" \
+curl -s -X POST "http://localhost:9443/api/stacks" \
     -H "Authorization: Bearer $JWT_TOKEN" \
     -H "Content-Type: application/json" \
     -d "{
         \"name\": \"monitoring\",
         \"stackFileContent\": \"$STACK_CONTENT\",
-        \"env\": $(jq -n --arg env "$ENV_CONTENT" '[$env]'),
-        \"swarmID\": \"$(docker info --format '{{.Swarm.Cluster.ID}}')\",
-        \"type\": 1
+        \"env\": $(jq -n --arg env \"$ENV_CONTENT\" '[{"name": "ENV", "value": $env}]'),
+        \"type\": 2
     }"
+
 
 check_error "Không thể tạo Stack trong Portainer"
 
@@ -118,7 +113,7 @@ log "Token: $INFLUXDB_TOKEN"
 log "Dữ liệu trong bucket '$INFLUXDB_BUCKET'"
 
 log "\nThông tin Portainer:"
-log "URL: http://localhost:9000"
+log "URL: http://localhost:9443"
 log "Username: admin"
 log "Password: $PORTAINER_PASSWORD"
 log "\nStack Monitoring đã được triển khai tự động trong Portainer"
