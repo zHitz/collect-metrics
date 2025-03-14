@@ -57,12 +57,48 @@ configure_telegraf() {
     done
 }
 
-# Check if manual configuration is enabled
+# Tạo config cho Portainer Stack
+create_stack_config() {
+    log "Tạo cấu hình cho Portainer Stack..."
+    
+    # Tạo thư mục cho stack
+    STACK_DIR="./stacks/monitoring"
+    mkdir -p "$STACK_DIR"
+    
+    # Copy docker-compose.yml
+    cp docker-compose.yml "$STACK_DIR/docker-compose.yml"
+    
+    # Tạo file .env cho stack
+    cat > "$STACK_DIR/.env" << EOL
+INFLUXDB_VERSION=${INFLUXDB_VERSION}
+INFLUXDB_USERNAME=${INFLUXDB_USERNAME}
+INFLUXDB_PASSWORD=${INFLUXDB_PASSWORD}
+INFLUXDB_ORG=${INFLUXDB_ORG}
+INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
+INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+TELEGRAF_VERSION=${TELEGRAF_VERSION}
+MEMORY_LIMIT=${MEMORY_LIMIT}
+CPU_LIMIT=${CPU_LIMIT}
+EOL
+
+    # Tạo telegraf.conf trong volume
+    docker volume create telegraf_config
+    docker run --rm -v telegraf_config:/etc/telegraf alpine:latest mkdir -p /etc/telegraf
+    
+    # Copy telegraf.conf vào volume
+    docker container create --name dummy -v telegraf_config:/etc/telegraf alpine:latest
+    docker cp "$TELEGRAF_CONFIG_DIR/telegraf.conf" dummy:/etc/telegraf/
+    docker rm dummy
+
+    log "\033[0;32mCấu hình Stack đã được tạo tại $STACK_DIR\033[0m"
+}
+
+# Thực thi
 if [ "$TELEGRAF_CONFIG_MANUAL" = "YES" ]; then
-    log "Manual configuration enabled. Skipping automatic configuration."
-    exit 0
+    log "Bỏ qua cấu hình tự động."
 else
     configure_telegraf
+    create_stack_config
 fi
 
 sudo chmod 644 "$TELEGRAF_CONFIG_DIR/telegraf.conf"

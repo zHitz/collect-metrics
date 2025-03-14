@@ -30,26 +30,84 @@ fi
 source "$ENV_FILE"
 log "Đã tải cấu hình từ $ENV_FILE"
 
+# --- Tạo mật khẩu ngẫu nhiên cho Portainer nếu chưa được đặt ---
+if [ -z "$PORTAINER_PASSWORD" ]; then
+    PORTAINER_PASSWORD=$(openssl rand -base64 12)
+    echo "PORTAINER_PASSWORD=$PORTAINER_PASSWORD" >> "$ENV_FILE"
+    log "Đã tạo mật khẩu Portainer mới"
+fi
+
+# --- Tạo thư mục dữ liệu cho Portainer ---
+PORTAINER_DATA_DIR=${PORTAINER_DATA_DIR:-./portainer_data}
+mkdir -p "$PORTAINER_DATA_DIR"
+check_error "Không thể tạo thư mục dữ liệu Portainer"
+
+# --- Khởi tạo Docker Swarm nếu chưa có ---
+if ! docker info | grep -q "Swarm: active"; then
+    log "Khởi tạo Docker Swarm..."
+    docker swarm init --advertise-addr $(hostname -i) 2>/dev/null || true
+fi
+
 # --- Gọi các script phụ ---
 BASE_DIR="$(dirname "$0")"
 "$BASE_DIR/install_docker.sh"
 "$BASE_DIR/setup_network.sh"
 "$BASE_DIR/config_telegraf.sh"
 
-# --- Triển khai bằng Docker Compose ---
-log "Triển khai InfluxDB và Telegraf bằng Docker Compose..."
-cd "$(dirname "$0")/.."  # Chuyển đến thư mục chứa docker-compose.yml
-docker-compose down 2>/dev/null  # Dừng và xóa container cũ nếu có
-docker-compose up -d
-check_error "Không thể triển khai Docker Compose"
+# --- Triển khai Portainer ---
+log "Triển khai Portainer..."
+docker-compose -f docker-compose.portainer.yml up -d
+check_error "Không thể triển khai Portainer"
 
-# --- Xác minh ---
-log "Kiểm tra trạng thái container..."
-sleep 5
-docker ps -a
+# --- Chờ Portainer khởi động ---
+log "Chờ Portainer khởi động..."
+sleep 10
 
-log "Kiểm tra log Telegraf..."
-docker logs telegraf 2>/dev/null || log "Chưa có log từ Telegraf (có thể container chưa khởi động)."
+# --- Tự động cấu hình Portainer ---
+log "Cấu hình Portainer..."
+# Khởi tạo admin user
+PORTAINER_INIT_RESPONSE=$(curl -s -X POST "http://localhost:9000/api/users/admin/init" \
+    -H "Content-Type: application/json" \
+    -d "{\"Username\":\"admin\",\"Password\":\"$PORTAINER_PASSWORD\"}")
+
+# Lấy JWT token để thao tác với API
+JWT_TOKEN=$(curl -s -X POST "http://localhost:9000/api/auth" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"admin\",\"password\":\"$PORTAINER_PASSWORD\"}" | jq -r .jwt)
+
+if [ -z "$JWT_TOKEN" ]; then
+    log "${RED}Không thể lấy token xác thực từ Portainer${NC}"
+    exit 1
+fi
+
+# --- Tạo và triển khai Stack ---
+log "Tạo Stack Monitoring..."
+
+# Đọc nội dung file docker-compose.yml và mã hóa base64
+STACK_CONTENT=$(base64 -w 0 ./stacks/monitoring/docker-compose.yml)
+ENV_CONTENT=$(base64 -w 0 ./stacks/monitoring/.env)
+
+# Tạo Stack qua Portainer API
+curl -s -X POST "http://localhost:9000/api/stacks" \
+    -H "Authorization: Bearer $JWT_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{
+        \"name\": \"monitoring\",
+        \"stackFileContent\": \"$STACK_CONTENT\",
+        \"env\": $(jq -n --arg env "$ENV_CONTENT" '[$env]'),
+        \"swarmID\": \"$(docker info --format '{{.Swarm.Cluster.ID}}')\",
+        \"type\": 1
+    }"
+
+check_error "Không thể tạo Stack trong Portainer"
+
+# --- Chờ các container khởi động ---
+log "Chờ các container khởi động..."
+sleep 20
+
+# --- Xác minh triển khai ---
+log "Kiểm tra trạng thái các services..."
+docker service ls
 
 # --- Thông tin kết thúc ---
 log "${GREEN}Triển khai hoàn tất!${NC}"
@@ -57,5 +115,11 @@ log "Truy cập InfluxDB tại: http://localhost:8086"
 log "Username: $INFLUXDB_USERNAME"
 log "Password: $INFLUXDB_PASSWORD"
 log "Token: $INFLUXDB_TOKEN"
-log "Dữ liệu trong bucket '$INFLUXDB_BUCKET'."
-log "Chỉnh sửa .env để thay đổi cấu hình."
+log "Dữ liệu trong bucket '$INFLUXDB_BUCKET'"
+
+log "\nThông tin Portainer:"
+log "URL: http://localhost:9000"
+log "Username: admin"
+log "Password: $PORTAINER_PASSWORD"
+log "\nStack Monitoring đã được triển khai tự động trong Portainer"
+log "Chỉnh sửa .env để thay đổi cấu hình"

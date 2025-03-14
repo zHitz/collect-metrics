@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    command: -H unix:///var/run/docker.sock
+    networks:
+      - portainer-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PORTAINER_DATA_DIR:-./portainer_data}:/data
+    ports:
+      - "9000:9000"
+      - "9443:9443"  # Port cho HTTPS
+    environment:
+      - TZ=${TZ:-UTC}
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: ${PORTAINER_MEMORY_LIMIT:-256M}
+          cpus: ${PORTAINER_CPU_LIMIT:-0.5}
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.localhost`)"
+
+networks:
+  portainer-net:
+    driver: overlay
+    attachable: true
+    name: ${PORTAINER_NETWORK_NAME:-portainer-net} 
