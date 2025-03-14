@@ -1,43 +1,45 @@
-# InfluxDB and Telegraf Deployment
+# 📊 InfluxDB & Telegraf Deployment 🚀
+
+![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker) ![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-green?logo=ubuntu) ![InfluxDB](https://img.shields.io/badge/InfluxDB-Metrics-purple?logo=influxdb)
 
 A professional, modular, and production-ready deployment solution for InfluxDB and Telegraf using Docker Compose. This project automates the setup of a monitoring stack to collect system metrics (e.g., CPU, memory, disk) and SNMP data, store them in InfluxDB, and provides debug scripts to validate the setup.
 
-## Features
+## ✨ Features
 
-- **Docker Compose-Based**: Deploys InfluxDB and Telegraf as containerized services with a single command.
-- **Modular Design**: Separates deployment logic into scripts for easy maintenance and extension.
-- **Configurable Plugins**: Supports Telegraf plugins (`cpu`, `memory`, `disk`, `snmp`) via environment variables.
-- **SNMP Support**: Includes automatic MIB file handling for SNMP monitoring.
-- **Debug Tools**: Built-in scripts to test and validate Telegraf and InfluxDB configurations.
-- **Production-Ready**: Resource limits, automatic restarts, and logging for stability.
+- 🐳 **Docker Compose-Based**: Deploys InfluxDB and Telegraf as containerized services with a single command.
+- 🧱 **Modular Design**: Separates deployment logic into scripts for easy maintenance and extension.
+- 🔧 **Configurable Plugins**: Supports Telegraf plugins (`cpu`, `memory`, `disk`, `snmp`) via environment variables.
+- 🌐 **SNMP Support**: Includes automatic MIB file handling for SNMP monitoring.
+- 🛠 **Debug Tools**: Built-in scripts to test and validate Telegraf and InfluxDB configurations.
+- ✅ **Production-Ready**: Resource limits, automatic restarts, and logging for stability.
 
-## Project Structure
+## 🗂 Project Structure
 
 ```bash
 influxdb-telegraf-deploy/
-├── .env                   # Environment variables for configuration
-├── docker-compose.yml     # Docker Compose service definitions
-├── scripts/               # Deployment scripts
-│   ├── deploy.sh          # Main deployment script
-│   ├── install_docker.sh  # Installs Docker and Docker Compose
-│   ├── setup_network.sh   # Sets up Docker network
-│   └── config_telegraf.sh # Generates Telegraf configuration
-├── config/                # Telegraf configuration directory
-│   └── telegraf.conf      # Generated Telegraf config file
-├── debug/                 # Debug and test scripts
-│   ├── test_telegraf.sh   # Tests Telegraf functionality
-    └── test_influxdb.sh   # Tests InfluxDB functionality
+├── .env                   # 🌐 Environment variables for configuration
+├── docker-compose.yml     # 🐳 Docker Compose service definitions
+├── scripts/               # ⚙️ Deployment scripts
+│   ├── deploy.sh          # 🚀 Main deployment script
+│   ├── install_docker.sh  # 🐋 Installs Docker and Docker Compose
+│   ├── setup_network.sh   # 🌐 Sets up Docker network
+│   └── config_telegraf.sh # 🔧 Generates Telegraf configuration
+├── config/                # 📝 Telegraf configuration directory
+│   └── telegraf.conf      # ⚙️ Generated Telegraf config file
+├── debug/                 # 🧰 Debug and test scripts
+│   ├── test_telegraf.sh   # 🧪 Tests Telegraf functionality
+│   └── test_influxdb.sh   # 🧪 Tests InfluxDB functionality
 ```
 
-## Prerequisites
+## 📝 Prerequisites
 
-- **OS**: Ubuntu (tested on 20.04/22.04)
-- **Dependencies**: 
+- 🐧 **OS**: Ubuntu (tested on 20.04/22.04)
+- 📦 **Dependencies**:
   - Docker
   - Docker Compose (v2.24.7 or later recommended)
-- **Network Access**: For SNMP, ensure devices are reachable (e.g., `172.18.10.2:161`).
+- 🌐 **Network Access**: For SNMP, ensure devices are reachable (e.g., `172.18.xxx.xxx:161`).
 
-## Installation
+## 🛠 Installation
 
 1. **Clone the Repository**:
    ```bash
@@ -55,7 +57,7 @@ influxdb-telegraf-deploy/
    nano .env
    ```
    Example `.env`:
-   ```
+   ```env
    # InfluxDB Config
    INFLUXDB_VERSION=2.7.0
    INFLUXDB_USERNAME=admin
@@ -130,40 +132,40 @@ sudo bash ./debug/test_telegraf.sh
 sudo bash ./debug/test_influxdb.sh
 ```
 
-## Configuration
+## 🔧 Configuration
 
-### Telegraf Plugins
+### 🧩 Telegraf Plugins
 Edit `TELEGRAF_PLUGINS` in `.env` to enable/disable plugins:
-- `cpu`: Collects CPU metrics.
-- `memory`: Collects memory usage.
-- `disk`: Collects disk usage.
-- `snmp`: Collects SNMP data (requires MIB files).
+- 🖥️ `cpu`: Collects CPU metrics.
+- 🧠 `memory`: Collects memory usage.
+- 💾 `disk`: Collects disk usage.
+- 📡 `snmp`: Collects SNMP data (requires MIB files).
 
 Example:
-```
+```bash
 TELEGRAF_PLUGINS=cpu,snmp
 ```
 
-### SNMP Setup
+### 🌐 SNMP Setup
 - Ensure SNMP devices are accessible (e.g., `172.18.10.2:161`).
 - Customize SNMP configuration in `scripts/config_telegraf.sh` under the `snmp` case (e.g., agents, community string).
 
-## Accessing InfluxDB
+## 🌐 Accessing InfluxDB
 
-- **URL**: `http://localhost:8086`
-- **Credentials**: Use `INFLUXDB_USERNAME` and `INFLUXDB_PASSWORD` from `.env`.
-- **Token**: Use `INFLUXDB_TOKEN` for API access.
-- **Bucket**: Data is stored in the bucket specified by `INFLUXDB_BUCKET`.
+- **🌐 URL**: `http://localhost:8086`
+- **👤 Credentials**: Use `INFLUXDB_USERNAME` and `INFLUXDB_PASSWORD` from `.env`.
+- **🔑 Token**: Use `INFLUXDB_TOKEN` for API access.
+- **🗂️ Bucket**: Data is stored in the bucket specified by `INFLUXDB_BUCKET`.
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
-- **Telegraf SNMP Errors**:
+- **❌ Telegraf SNMP Errors**:
   - Check `docker logs telegraf` for MIB-related errors.
   - Verify MIB files in `mibs/` and container (`docker exec -it telegraf ls /usr/share/snmp/mibs`).
-- **InfluxDB Connection**:
+- **🔌 InfluxDB Connection**:
   - Ensure `influxdb` container is running (`docker ps`).
   - Check logs: `docker logs influxdb`.
-- **Network Issues**:
+- **🌐 Network Issues**:
   - Verify network: `docker network ls | grep influxdb-telegraf-net`.
 
 ## Extending the Project
