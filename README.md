@@ -42,7 +42,11 @@ influxdb-telegraf-deploy/
 1. **Clone the Repository**:
    ```bash
    git clone https://github.com/zHitz/Collect-Metrics.git
+<<<<<<< HEAD
    cd Collect-Metrics
+=======
+   cd influxdb-telegraf-deploy
+>>>>>>> 444cb48 (Enhance Telegraf configuration and documentation)
    ```
 2. **Set Up Permissions**:
    ```bash
@@ -67,8 +71,13 @@ influxdb-telegraf-deploy/
 
    # Telegraf Config
    TELEGRAF_VERSION=1.25.0
-   TELEGRAF_CONFIG_DIR=/etc/telegraf
+   TELEGRAF_CONFIG_DIR=${PWD}/config
+   TELEGRAF_CONFIG_MANUAL=NO        # Set to YES if you want to configure Telegraf manually
    TELEGRAF_PLUGINS=cpu,memory,disk,snmp
+
+   # SNMP Plugin Config (Required if using SNMP plugin)
+   TELEGRAF_SNMP_HOST=172.18.xxx.xxx
+   TELEGRAF_SNMP_COMMUNITY='your_community_string'
 
    # Network Config
    NETWORK_NAME=influxdb-telegraf-net
@@ -76,10 +85,17 @@ influxdb-telegraf-deploy/
    # Resource Limits
    MEMORY_LIMIT=512m
    CPU_LIMIT=1
-
-   # Debug Option
-   DEBUG=no
    ```
+
+### Telegraf Configuration Options
+
+You can choose between automatic or manual configuration for Telegraf:
+
+- **Automatic Configuration (Default)**:
+  Set `TELEGRAF_CONFIG_MANUAL=NO` in your .env file. The script will automatically configure Telegraf based on the plugins specified in `TELEGRAF_PLUGINS`.
+
+- **Manual Configuration**:
+  Set `TELEGRAF_CONFIG_MANUAL=YES` in your .env file. This will skip the automatic configuration, allowing you to manually configure Telegraf as needed.
 
 ## Deployment
 
