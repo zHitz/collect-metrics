@@ -3,70 +3,36 @@ version: '3.8'
 services:
   influxdb:
     image: influxdb:${INFLUXDB_VERSION:-2.7.0}
+    container_name: influxdb
     networks:
       - monitoring-net
     volumes:
-      - influxdb_data:/var/lib/influxdb2
+      - ${INFLUXDB_DATA_VOLUME:./influxdb_data}:/var/lib/influxdb2
     ports:
-      - "${INFLUXDB_PORT:-8086}:8086"
+      - "8086:8086"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME:-admin}
-      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD:-SecureP@ssw0rd2025}
-      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG:-ProdMonitoring}
-      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET:-ServerMetrics}
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN:-your-super-secret-token}
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      resources:
-        limits:
-          memory: ${MEMORY_LIMIT:-512M}
-          cpus: ${CPU_LIMIT:-1}
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+    restart: unless-stopped
 
   telegraf:
-    image: telegraf:${TELEGRAF_VERSION:-1.25.0}
+    image: telegraf-snmp:${TELEGRAF_VERSION:-1.25.0}
+    container_name: telegraf
     networks:
       - monitoring-net
     volumes:
-      - telegraf_config:/etc/telegraf:ro
+      - ${TELEGRAF_CONFIG_DIR:./telegraf}:/etc/telegraf/telegraf.conf:ro
     environment:
-      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-your-super-secret-token}
-      - INFLUXDB_ORG=${INFLUXDB_ORG:-ProdMonitoring}
-      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-ServerMetrics}
-      - INFLUXDB_URL=http://influxdb:8086
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == worker
-      resources:
-        limits:
-          memory: ${MEMORY_LIMIT:-512M}
-          cpus: ${CPU_LIMIT:-1}
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-    depends_on:
-      - influxdb
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
+    restart: unless-stopped
+
 
 networks:
   monitoring-net:
-    driver: overlay
-    attachable: true
-    name: ${NETWORK_NAME:-monitoring-net}
-
-volumes:
-  influxdb_data:
-    name: ${INFLUXDB_DATA_VOLUME:-influxdb_data}
-  telegraf_config:
-    name: ${TELEGRAF_CONFIG_VOLUME:-telegraf_config}
+    driver: bridge

@@ -5,8 +5,8 @@ PORTAINER_URL="http://localhost:9000"  # e.g., http://localhost:9000
 USERNAME="admin"  # e.g., admin
 PASSWORD="Wl+jVfl5l3m9tM24"  # Your Portainer password
 ENDPOINT_ID=1  # Usually 1 for local Docker; check your Portainer endpoints
-STACK_NAME="wordpress-stack"  # Name of the stack to deploy
-STACK_FILE="./stacks/monitoring/docker-compose.yml"  # Pabashth to your stack definition file
+STACK_NAME="monitoring-stack"  # Name of the stack to deploy
+STACK_FILE="./stacks/monitoring/docker-compose.yml"  # Path to your stack definition file
 
 # Check if required tools are installed
 if ! command -v curl &> /dev/null || ! command -v jq &> /dev/null; then
@@ -36,8 +36,8 @@ echo "Authentication successful! JWT: $JWT_TOKEN"
 
 # Step 2: Read and prepare stack content
 echo "Reading stack file: $STACK_FILE"
-STACK_CONTENT=$(cat "$STACK_FILE" | sed 's/"/\\"/g' | tr -d '\n\r')
-if [ -z "$STACK_CONTENT" ]; then
+STACK_CONTENT=$(jq -Rs . < "$STACK_FILE")
+if [ -z "$STACK_CONTENT" ] || [ "$STACK_CONTENT" == "\"\"" ]; then
     echo "Error: Stack file '$STACK_FILE' is empty."
     exit 1
 fi
@@ -47,7 +47,7 @@ echo "Deploying stack '$STACK_NAME' to endpoint $ENDPOINT_ID..."
 DEPLOY_RESPONSE=$(curl -s -w "%{http_code}" -X POST "$PORTAINER_URL/api/stacks?type=2&method=string&endpointId=$ENDPOINT_ID" \
     -H "Authorization: Bearer $JWT_TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"Name\":\"$STACK_NAME\",\"StackFileContent\":\"$STACK_CONTENT\",\"Env\":[]}")
+    -d "{\"Name\":\"$STACK_NAME\",\"StackFileContent\":$STACK_CONTENT,\"Env\":[]}")
 
 # Extract HTTP status code (last 3 characters of response)
 HTTP_STATUS=${DEPLOY_RESPONSE: -3}

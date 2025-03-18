@@ -48,9 +48,11 @@ BASE_DIR="$(dirname "$0")"
 "$BASE_DIR/install_docker.sh"
 "$BASE_DIR/setup_network.sh"
 "$BASE_DIR/config_telegraf.sh"
+"$BASE_DIR/build_telegraf_snmp.sh"
 
 # --- Triển khai Portainer ---
 log "Triển khai Portainer..."
+docker-compose down
 docker-compose -f docker-compose.portainer.yml up -d
 check_error "Không thể triển khai Portainer"
 
@@ -64,35 +66,6 @@ log "Cấu hình Portainer..."
 PORTAINER_INIT_RESPONSE=$(curl -s -X POST "http://localhost:9000/api/users/admin/init" \
     -H "Content-Type: application/json" \
     -d "{\"Username\":\"admin\",\"Password\":\"$PORTAINER_PASSWORD\"}")
-
-# Lấy JWT token để thao tác với API
-JWT_TOKEN=$(curl -s -X POST "http://localhost:9000/api/auth" \
-    -H "Content-Type: application/json" \
-    -d "{\"username\":\"admin\",\"password\":\"$PORTAINER_PASSWORD\"}" | jq -r .jwt)
-
-if [ -z "$JWT_TOKEN" ]; then
-    log "${RED}Không thể lấy token xác thực từ Portainer${NC}"
-    exit 1
-fi
-
-# --- Tạo và triển khai Stack ---
-log "Tạo Stack Monitoring..."
-
-# Đọc nội dung file docker-compose.yml và mã hóa base64
-STACK_CONTENT=$(base64 -w 0 ./stacks/monitoring/docker-compose.yml)
-ENV_CONTENT=$(base64 -w 0 ./stacks/monitoring/.env)
-
-# Tạo Stack qua Portainer API
-curl -s -X POST "http://localhost:9443/api/stacks" \
-    -H "Authorization: Bearer $JWT_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"name\": \"monitoring\",
-        \"stackFileContent\": \"$STACK_CONTENT\",
-        \"env\": $(jq -n --arg env \"$ENV_CONTENT\" '[{"name": "ENV", "value": $env}]'),
-        \"type\": 2
-    }"
-
 
 check_error "Không thể tạo Stack trong Portainer"
 
