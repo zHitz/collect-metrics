@@ -7,7 +7,7 @@ services:
     networks:
       - monitoring-net
     volumes:
-      - ${INFLUXDB_DATA_VOLUME:./influxdb_data}:/var/lib/influxdb2
+      - ${INFLUXDB_DATA_DIR}:/var/lib/influxdb2
     ports:
       - "8086:8086"
     environment:
@@ -25,7 +25,7 @@ services:
     networks:
       - monitoring-net
     volumes:
-      - ${TELEGRAF_CONFIG_DIR:./telegraf}:/etc/telegraf/telegraf.conf:ro
+      - ${TELEGRAF_CONFIG_FILE}:/etc/telegraf/telegraf.conf:ro
     environment:
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
       - INFLUXDB_ORG=${INFLUXDB_ORG}
