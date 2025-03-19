@@ -3,13 +3,13 @@ version: '3.8'
 services:
   influxdb:
     image: influxdb:${INFLUXDB_VERSION:-2.7.0}
-    container_name: influxdb
+    container_name: ${INFLUXDB_CONTAINER_NAME}
     networks:
-      - monitoring-net
+      - ${NETWORK_NAME}
     volumes:
       - ${INFLUXDB_DATA_DIR}:/var/lib/influxdb2
     ports:
-      - "8086:8086"
+      - "${INFLUXDB_PORT}:8086"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
@@ -21,9 +21,9 @@ services:
 
   telegraf:
     image: telegraf-snmp:${TELEGRAF_VERSION:-1.25.0}
-    container_name: telegraf
+    container_name: ${TELEGRAF_CONTAINER_NAME}
     networks:
-      - monitoring-net
+      - ${NETWORK_NAME}
     volumes:
       - ${TELEGRAF_CONFIG_FILE}:/etc/telegraf/telegraf.conf:ro
     environment:
@@ -34,5 +34,5 @@ services:
 
 
 networks:
-  monitoring-net:
+  ${NETWORK_NAME}:
     driver: bridge

@@ -13,20 +13,21 @@ A professional, modular, and production-ready deployment solution for InfluxDB a
 
 ## Project Structure
 
+
 ```bash
 influxdb-telegraf-deploy/
-├── .env                   # Environment variables for configuration
-├── docker-compose.yml     # Docker Compose service definitions
-├── scripts/               # Deployment scripts
-│   ├── deploy.sh          # Main deployment script
-│   ├── install_docker.sh  # Installs Docker and Docker Compose
-│   ├── setup_network.sh   # Sets up Docker network
-│   └── config_telegraf.sh # Generates Telegraf configuration
-├── config/                # Telegraf configuration directory
-│   └── telegraf.conf      # Generated Telegraf config file
-├── debug/                 # Debug and test scripts
-│   ├── test_telegraf.sh   # Tests Telegraf functionality
-    └── test_influxdb.sh   # Tests InfluxDB functionality
+├── .env # Environment variables for configuration
+├── docker-compose.yml # Docker Compose service definitions
+├── scripts/ # Deployment scripts
+│ ├── deploy.sh # Main deployment script
+│ ├── install_docker.sh # Installs Docker and Docker Compose
+│ ├── setup_network.sh # Sets up Docker network
+│ └── config_telegraf.sh # Generates Telegraf configuration
+├── config/ # Telegraf configuration directory
+│ └── telegraf.conf # Generated Telegraf config file
+├── debug/ # Debug and test scripts
+│ ├── test_telegraf.sh # Tests Telegraf functionality
+└── test_influxdb.sh # Tests InfluxDB functionality
 ```
 
 ## Prerequisites

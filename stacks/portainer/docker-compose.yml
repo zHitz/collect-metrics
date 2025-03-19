@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  portainer:
+    image: portainer/portainer-ce:${PORTAINER_VERSION:-latest}
+    container_name: ${PORTAINER_NAME}
+    command: -H unix:///var/run/docker.sock
+    networks:
+      - ${PORTAINER_NETWORK_NAME}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PORTAINER_DATA_DIR:-/opt/portainer/data}:/data
+    ports:
+      - "${PORTAINER_PORT}:9000"
+      - "${PORTAINER_HTTPS_PORT}:9443"  # HTTPS Port
+    environment:
+      - TZ=${TZ:-UTC}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${PORTAINER_MEMORY_LIMIT}
+          cpus: ${PORTAINER_CPU_LIMIT}
+
+networks:
+  ${PORTAINER_NETWORK_NAME}:
+    driver: bridge
