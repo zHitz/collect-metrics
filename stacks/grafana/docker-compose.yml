@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-9.5.0}
+    container_name: ${GRAFANA_CONTAINER_NAME}
+    networks:
+      - grafana-net
+    volumes:
+      - ${GRAFANA_DATA_DIR}:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    restart: unless-stopped
+
+networks:
+  grafana-net:
+    driver: bridge 

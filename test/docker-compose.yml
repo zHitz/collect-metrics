@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/lib/grafana:/var/lib/grafana
+      - ./init-grafana.sh:/init-grafana.sh  # Mount script vào container
+      - ./dashboard.json:/dashboard.json  # Mount dashboard vào container
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false

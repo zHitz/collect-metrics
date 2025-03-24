@@ -5,7 +5,7 @@ services:
     image: influxdb:${INFLUXDB_VERSION:-2.7.0}
     container_name: ${INFLUXDB_CONTAINER_NAME}
     networks:
-      - ${NETWORK_NAME}
+      - influxdb-telegraf-net
     volumes:
       - ${INFLUXDB_DATA_DIR}:/var/lib/influxdb2
     ports:
@@ -23,7 +23,7 @@ services:
     image: telegraf-snmp:${TELEGRAF_VERSION:-1.25.0}
     container_name: ${TELEGRAF_CONTAINER_NAME}
     networks:
-      - ${NETWORK_NAME}
+      - influxdb-telegraf-net
     volumes:
       - ${TELEGRAF_CONFIG_FILE}:/etc/telegraf/telegraf.conf:ro
     environment:
@@ -34,5 +34,5 @@ services:
 
 
 networks:
-  ${NETWORK_NAME}:
+  influxdb-telegraf-net:
     driver: bridge
