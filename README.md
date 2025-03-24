@@ -43,8 +43,8 @@ influxdb-telegraf-deploy/
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/zHitz/Collect-Metrics.git
-   cd Collect-Metrics
+   git clone https://github.com/zHitz/collect-metrics.git
+   cd collect-metrics
    ```
 2. **Set Up Permissions**:
    ```bash
