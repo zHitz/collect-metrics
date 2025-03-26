@@ -1,6 +1,6 @@
 # 📊 InfluxDB & Telegraf Deployment 🚀
 
-![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker) ![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-green?logo=ubuntu) ![InfluxDB](https://img.shields.io/badge/InfluxDB-Metrics-purple?logo=influxdb)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker) ![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-green?logo=ubuntu) ![CentOS](https://img.shields.io/badge/OS-CentOS-red?logo=centos) ![InfluxDB](https://img.shields.io/badge/InfluxDB-Metrics-purple?logo=influxdb)
 
 A professional, modular, and production-ready deployment solution for InfluxDB and Telegraf using Docker Compose. This project automates the setup of a monitoring stack to collect system metrics (e.g., CPU, memory, disk) and SNMP data, store them in InfluxDB, and provides debug scripts to validate the setup.
 
@@ -33,7 +33,9 @@ influxdb-telegraf-deploy/
 
 ## 📝 Prerequisites
 
-- 🐧 **OS**: Ubuntu (tested on 20.04/22.04)
+- 🐧 **OS**: 
+  - Ubuntu (tested on 20.04/22.04)
+  - CentOS (tested on 7/8/Stream)
 - 📦 **Dependencies**:
   - Docker
   - Docker Compose (v2.24.7 or later recommended)
@@ -181,6 +183,15 @@ Feel free to submit issues or pull requests on GitHub. Contributions are welcome
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
+## OS Compatibility
+
+This project has been updated to support both Ubuntu and CentOS/RHEL-based distributions:
+
+- **Ubuntu/Debian**: Fully tested and supported
+- **CentOS/RHEL**: Fully tested and supported
+
+The deployment scripts automatically detect your operating system and apply the appropriate installation methods.
 
 ---
 Created with ❤️ by Hitz on March 12, 2025
