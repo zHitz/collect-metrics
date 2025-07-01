@@ -39,8 +39,8 @@ BASE_DIR="$(dirname "$0")"
 # --- Triển khai bằng Docker Compose ---
 log "Triển khai InfluxDB và Telegraf bằng Docker Compose..."
 cd "$(dirname "$0")/.."  # Chuyển đến thư mục chứa docker-compose.yml
-docker-compose down 2>/dev/null  # Dừng và xóa container cũ nếu có
-docker-compose up -d
+docker compose down 2>/dev/null  # Dừng và xóa container cũ nếu có
+docker compose up -d
 check_error "Không thể triển khai Docker Compose"
 
 # --- Xác minh ---

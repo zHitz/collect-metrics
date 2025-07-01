@@ -8,8 +8,8 @@ services:
       - influxdb-telegraf-net
     volumes:
       - ${INFLUXDB_DATA_DIR}:/var/lib/influxdb2
-    ports:
-      - "8086:8086"
+    expose:
+      - "8086"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
@@ -30,12 +30,23 @@ services:
       - influxdb-telegraf-net
     volumes:
       - ${TELEGRAF_CONFIG_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./scripts/cisco:/scripts:ro
     environment:
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
       - INFLUXDB_ORG=${INFLUXDB_ORG}
       - INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
     restart: unless-stopped
 
+  nginx:
+    image: nginx:latest
+    container_name: nginx-proxy
+    networks:
+      - influxdb-telegraf-net
+    ports:
+      - "8087:8087"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    restart: unless-stopped
 
 networks:
   influxdb-telegraf-net:

@@ -1,0 +1,18 @@
+# Test environment files
+test/.env
+test/.env.*
+# Virtual environment
+venv/
+env/
+.venv/
+.env/
+test/venv/
+test/env/
+test/.venv/
+test/.env/
+
+# Logs file
+test/device_logs.log
+*.log
+
+
