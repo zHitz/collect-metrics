@@ -1,11 +1,3 @@
----
-
-Tuyệt vời! Bạn đang sử dụng Telegraf trong container trên Ubuntu để thu thập metrics từ Cisco switch thông qua `inputs.exec`. Điều này có nghĩa là Telegraf trong container cần có khả năng chạy một script trên **máy chủ Ubuntu** của bạn để tương tác với Cisco switch.
-
-Đây là cách chúng ta sẽ thiết lập nó một cách hiệu quả và an toàn:
-
----
-
 ### 1. Hiểu Vấn Đề Khi Chạy `inputs.exec` Từ Container
 
 Khi Telegraf chạy trong một container, nó bị cô lập khỏi hệ thống tệp và các công cụ trên máy chủ Ubuntu của bạn. Do đó:

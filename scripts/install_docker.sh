@@ -55,24 +55,25 @@ if ! command -v docker &> /dev/null; then
 fi
 log "\033[0;32mDocker đã sẵn sàng.\033[0m"
 
-# Cài docker-compose nếu chưa có
-if ! command -v docker-compose &> /dev/null; then
-    log "Cài đặt Docker Compose..."
-    
+# Cài docker compose plugin (bản mới) nếu chưa có
+if ! command -v docker compose &> /dev/null; then
+    log "Cài đặt Docker Compose (plugin)..."
     case "$OS" in
         "ubuntu")
-            sudo apt-get install -y docker-compose
+            sudo apt-get update
+            sudo apt-get install -y docker-compose-plugin
             ;;
         "centos" | "rhel" | "fedora" | "amzn")
-            sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-            sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+            # Cài đặt plugin compose cho Docker trên CentOS/RHEL/Fedora/Amazon Linux
+            sudo mkdir -p /usr/libexec/docker/cli-plugins
+            sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/libexec/docker/cli-plugins/docker-compose
+            sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
             ;;
         *)
-            log "Vui lòng cài đặt Docker Compose thủ công: https://docs.docker.com/compose/install/"
+            log "Vui lòng cài đặt Docker Compose plugin thủ công: https://docs.docker.com/compose/install/"
             exit 1
             ;;
     esac
-    check_error "Không thể cài đặt Docker Compose"
+    check_error "Không thể cài đặt Docker Compose plugin"
 fi
-log "\033[0;32mDocker Compose đã sẵn sàng.\033[0m"
+log "\033[0;32mDocker Compose (plugin) đã sẵn sàng.\033[0m"

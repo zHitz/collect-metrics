@@ -21,10 +21,10 @@ check_error() {
     fi
 }
 
-# --- Tải file .env ---
+# --- Đảm bảo luôn có file .env trước khi chạy tiếp ---
 ENV_FILE=".env"
-if [ ! -f "$ENV_FILE" ]; then
-    log "${RED}Không tìm thấy $ENV_FILE. Vui lòng tạo file theo mẫu.${NC}"
+if [ ! -f "$ENV_FILE" ] || [ ! -s "$ENV_FILE" ]; then
+    log "${RED}Không tìm thấy hoặc file $ENV_FILE rỗng. Vui lòng tạo file .env từ .env.example và điền thông tin cấu hình.${NC}"
     exit 1
 fi
 source "$ENV_FILE"

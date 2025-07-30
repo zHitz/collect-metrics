@@ -30,7 +30,8 @@ services:
       - influxdb-telegraf-net
     volumes:
       - ${TELEGRAF_CONFIG_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ./scripts/cisco:/scripts:ro
+      - ./scripts/cisco:/scripts/cisco:ro
+      - ./scripts/hillstone:/scripts/hillstone:ro
     environment:
       - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
       - INFLUXDB_ORG=${INFLUXDB_ORG}
