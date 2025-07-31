@@ -9,11 +9,11 @@ datasources:
     url: http://influxdb:8086
     jsonData:
       version: Flux
-      organization: ${INFLUX_ORG}
-      defaultBucket: ${INFLUX_BUCKET}
+      organization: 
+      defaultBucket: 
       tlsSkipVerify: true
     secureJsonData:
-      token: ${INFLUX_TOKEN}
+      token: 
     isDefault: true
     editable: false
 
@@ -38,9 +38,9 @@ datasources:
     jsonData:
       version: InfluxQL
       httpMode: POST
-      organization: ${INFLUX_ORG}
-      defaultBucket: ${INFLUX_BUCKET}
+      organization: 
+      defaultBucket: 
     secureJsonData:
-      token: ${INFLUX_TOKEN}
+      token: 
     isDefault: false
     editable: false

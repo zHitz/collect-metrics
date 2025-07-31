@@ -1,10 +1,114 @@
-version: '3.8'
-
 services:
   # ===============================================
   # Core Services (Always Enabled)
   # ===============================================
   
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-grafana:12.2.0-16636675413}
+    container_name: ${COMPOSE_PROJECT_NAME}-grafana
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS:-}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
+      GF_SERVER_ENABLE_GZIP: 'true'
+    volumes:
+      - ${GRAFANA_DATA_PATH:-./data/grafana}:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning
+      - ./dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: ${GRAFANA_MEMORY_LIMIT:-1g}
+          cpus: '${GRAFANA_CPU_LIMIT:-1}'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.5.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-30d}'
+      - '--storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-10GB}'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./configs/prometheus/targets:/etc/prometheus/targets:ro
+      - ${PROMETHEUS_DATA_PATH:-./data/prometheus}:/prometheus
+    deploy:
+      resources:
+        limits:
+          memory: ${PROMETHEUS_MEMORY_LIMIT:-2g}
+          cpus: '${PROMETHEUS_CPU_LIMIT:-2}'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Node Exporter - Server Metrics
+  node-exporter:
+    image: prom/node-exporter:${NODE_EXPORTER_VERSION:-v1.9.0}
+    container_name: ${COMPOSE_PROJECT_NAME}-node-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.5'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+
+  # ===============================================
+  # Optional Services (Enabled by Profiles)
+  # ===============================================
+
   # InfluxDB - Time Series Database
   influxdb:
     image: influxdb:${INFLUXDB_VERSION:-2.7.0}
@@ -40,117 +144,17 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-
-  # Grafana - Visualization
-  grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-10.0.0}
-    container_name: ${COMPOSE_PROJECT_NAME}-grafana
-    restart: unless-stopped
-    networks:
-      - monitoring
-    ports:
-      - "${GRAFANA_PORT:-3000}:3000"
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS:-}
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
-      GF_SERVER_ENABLE_GZIP: 'true'
-    volumes:
-      - ${GRAFANA_DATA_PATH:-./data/grafana}:/var/lib/grafana
-      - ./configs/grafana/provisioning:/etc/grafana/provisioning
-      - ./dashboards:/var/lib/grafana/dashboards
-    depends_on:
-      - influxdb
-      - prometheus
-    deploy:
-      resources:
-        limits:
-          memory: ${GRAFANA_MEMORY_LIMIT:-1g}
-          cpus: '${GRAFANA_CPU_LIMIT:-1}'
-    logging:
-      driver: ${LOG_DRIVER:-json-file}
-      options:
-        max-size: ${LOG_MAX_SIZE:-10m}
-        max-file: '${LOG_MAX_FILE:-3}'
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # Prometheus - Metrics Collection
-  prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.45.0}
-    container_name: ${COMPOSE_PROJECT_NAME}-prometheus
-    restart: unless-stopped
-    networks:
-      - monitoring
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-15d}'
-      - '--storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-10GB}'
-      - '--web.enable-lifecycle'
-      - '--web.enable-admin-api'
-    volumes:
-      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ${PROMETHEUS_DATA_PATH:-./data/prometheus}:/prometheus
-    deploy:
-      resources:
-        limits:
-          memory: ${PROMETHEUS_MEMORY_LIMIT:-2g}
-          cpus: '${PROMETHEUS_CPU_LIMIT:-2}'
-    logging:
-      driver: ${LOG_DRIVER:-json-file}
-      options:
-        max-size: ${LOG_MAX_SIZE:-10m}
-        max-file: '${LOG_MAX_FILE:-3}'
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # Node Exporter - Server Metrics
-  node-exporter:
-    image: prom/node-exporter:${NODE_EXPORTER_VERSION:-v1.6.0}
-    container_name: ${COMPOSE_PROJECT_NAME}-node-exporter
-    restart: unless-stopped
-    networks:
-      - monitoring
-    ports:
-      - "${NODE_EXPORTER_PORT:-9100}:9100"
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--path.rootfs=/rootfs'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    deploy:
-      resources:
-        limits:
-          memory: 128m
-          cpus: '0.5'
-    logging:
-      driver: ${LOG_DRIVER:-json-file}
-      options:
-        max-size: ${LOG_MAX_SIZE:-10m}
-        max-file: '${LOG_MAX_FILE:-3}'
-
-  # ===============================================
-  # Optional Services (Enabled by Profiles)
-  # ===============================================
+    profiles:
+      - snmp
 
   # Telegraf SNMP - Network Device Monitoring
-  telegraf-snmp:
-    image: telegraf:${TELEGRAF_VERSION:-1.27.0}
-    container_name: ${COMPOSE_PROJECT_NAME}-telegraf-snmp
+  telegraf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TELEGRAF_VERSION: ${TELEGRAF_VERSION:-1.27.0} 
+    container_name: ${COMPOSE_PROJECT_NAME}-telegraf
     restart: unless-stopped
     networks:
       - monitoring
@@ -160,8 +164,8 @@ services:
       INFLUX_BUCKET: ${INFLUXDB_BUCKET}
       INFLUX_URL: http://influxdb:8086
     volumes:
-      - ./configs/telegraf/telegraf-snmp.conf:/etc/telegraf/telegraf.conf:ro
-      - /usr/share/snmp/mibs:/usr/share/snmp/mibs:ro
+      - ./configs/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./exec-scripts:/scripts:ro
     depends_on:
       - influxdb
     deploy:
@@ -176,36 +180,6 @@ services:
         max-file: '${LOG_MAX_FILE:-3}'
     profiles:
       - snmp
-
-  # Telegraf Exec - Custom Scripts
-  telegraf-exec:
-    image: telegraf:${TELEGRAF_VERSION:-1.27.0}
-    container_name: ${COMPOSE_PROJECT_NAME}-telegraf-exec
-    restart: unless-stopped
-    networks:
-      - monitoring
-    environment:
-      INFLUX_TOKEN: ${INFLUXDB_TOKEN}
-      INFLUX_ORG: ${INFLUXDB_ORG}
-      INFLUX_BUCKET: ${INFLUXDB_BUCKET}
-      INFLUX_URL: http://influxdb:8086
-    volumes:
-      - ./configs/telegraf/telegraf-exec.conf:/etc/telegraf/telegraf.conf:ro
-      - ${TELEGRAF_EXEC_SCRIPTS_PATH:-./exec-scripts}:/scripts:ro
-    depends_on:
-      - influxdb
-    deploy:
-      resources:
-        limits:
-          memory: ${TELEGRAF_MEMORY_LIMIT:-512m}
-          cpus: '${TELEGRAF_CPU_LIMIT:-1}'
-    logging:
-      driver: ${LOG_DRIVER:-json-file}
-      options:
-        max-size: ${LOG_MAX_SIZE:-10m}
-        max-file: '${LOG_MAX_FILE:-3}'
-    profiles:
-      - exec
 
   # AlertManager (Optional)
   alertmanager:

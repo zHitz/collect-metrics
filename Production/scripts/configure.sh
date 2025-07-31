@@ -8,7 +8,7 @@
 set -euo pipefail
 
 # Script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Colors
@@ -49,25 +49,52 @@ generate_token() {
 # Check and update .env file
 check_env_file() {
     log_info "Checking environment configuration..."
-    
+
     if [ ! -f "$PROJECT_ROOT/.env" ]; then
         log_warning ".env file not found. Creating from template..."
         cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
-        
-        # Generate secure passwords
-        INFLUX_PASS=$(generate_password 20)
-        GRAFANA_PASS=$(generate_password 20)
-        INFLUX_TOKEN=$(generate_token)
-        
-        # Update passwords in .env
-        sed -i "s/INFLUXDB_PASSWORD=.*/INFLUXDB_PASSWORD=$INFLUX_PASS/" "$PROJECT_ROOT/.env"
-        sed -i "s/GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD=$GRAFANA_PASS/" "$PROJECT_ROOT/.env"
-        sed -i "s/INFLUXDB_TOKEN=.*/INFLUXDB_TOKEN=$INFLUX_TOKEN/" "$PROJECT_ROOT/.env"
-        
-        log_success "Generated secure passwords and tokens"
     fi
-    
-    # Source environment variables
+
+    # Source environment variables before generating passwords
+    set -a
+    source "$PROJECT_ROOT/.env"
+    set +a
+
+    # Only generate and update passwords/tokens if they are empty or default
+    update_env=false
+
+    # Check and generate INFLUXDB_PASSWORD
+    if [ -z "${INFLUXDB_PASSWORD:-}" ] || [[ "$INFLUXDB_PASSWORD" == "changeMe" ]]; then
+        INFLUX_PASS=$(generate_password 20)
+        sed -i "s/^INFLUXDB_PASSWORD=.*/INFLUXDB_PASSWORD=$INFLUX_PASS/" "$PROJECT_ROOT/.env"
+        echo "INFLUX_PASS: $INFLUX_PASS"
+        update_env=true
+    fi
+
+    # Check and generate GRAFANA_ADMIN_PASSWORD
+    if [ -z "${GRAFANA_ADMIN_PASSWORD:-}" ] || [[ "$GRAFANA_ADMIN_PASSWORD" == "admin" ]]; then
+        GRAFANA_PASS=$(generate_password 20)
+        sed -i "s/^GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD=$GRAFANA_PASS/" "$PROJECT_ROOT/.env"
+        echo "GRAFANA_PASS: $GRAFANA_PASS"
+        update_env=true
+    fi
+
+    # Check and generate INFLUXDB_TOKEN
+    if [ -z "${INFLUXDB_TOKEN:-}" ] || [[ "$INFLUXDB_TOKEN" == "my-super-secret-auth-token" ]]; then
+        echo "Generating INFLUXDB_TOKEN"
+        INFLUX_TOKEN=$(generate_token)
+        sed -i "s/^INFLUXDB_TOKEN=.*/INFLUXDB_TOKEN=$INFLUX_TOKEN/" "$PROJECT_ROOT/.env"
+        echo "INFLUX_TOKEN: $INFLUX_TOKEN"
+        update_env=true
+    fi
+
+    if [ "$update_env" = true ]; then
+        log_success "Generated and updated secure passwords and tokens in .env"
+    else
+        log_info "Passwords and tokens already set in .env, not regenerating."
+    fi
+
+    # Re-source environment variables after possible update
     set -a
     source "$PROJECT_ROOT/.env"
     set +a
@@ -78,6 +105,12 @@ configure_telegraf_snmp() {
     if [ "${ENABLE_SNMP}" = "true" ]; then
         log_info "Configuring Telegraf SNMP..."
         
+        # Check if TELEGRAF_SNMP_AGENTS is set
+        if [ -z "${TELEGRAF_SNMP_AGENTS:-}" ]; then
+            log_warning "TELEGRAF_SNMP_AGENTS not set, using default"
+            TELEGRAF_SNMP_AGENTS="router1:192.168.1.1:161:public,switch1:192.168.1.2:161:public"
+        fi
+        
         # Parse SNMP agents from environment variable
         # Format: name:host:port:community,name:host:port:community
         AGENTS_ARRAY=()
@@ -85,17 +118,28 @@ configure_telegraf_snmp() {
         for agent in "${AGENTS[@]}"; do
             IFS=':' read -ra PARTS <<< "$agent"
             if [ ${#PARTS[@]} -eq 4 ]; then
+                # Format: "host:port"
                 AGENTS_ARRAY+=("\"${PARTS[1]}:${PARTS[2]}\"")
+                log_info "Added SNMP agent: ${PARTS[1]}:${PARTS[2]} (${PARTS[0]})"
+            else
+                log_warning "Invalid SNMP agent format: $agent (expected: name:host:port:community)"
             fi
         done
         
         # Join array elements
-        AGENTS_STRING=$(IFS=','; echo "${AGENTS_ARRAY[*]}")
-        
-        # Update SNMP config file
-        sed -i "s/agents = \[.*\]/agents = [$AGENTS_STRING]/" "$PROJECT_ROOT/configs/telegraf/telegraf-snmp.conf"
-        
-        log_success "Telegraf SNMP configuration updated"
+        if [ ${#AGENTS_ARRAY[@]} -gt 0 ]; then
+            AGENTS_STRING=$(IFS=','; echo "${AGENTS_ARRAY[*]}")
+            
+            # Update SNMP config file
+            sed -i "s/agents = \[.*\]/agents = [$AGENTS_STRING]/" "$PROJECT_ROOT/configs/telegraf/telegraf.conf"
+            
+            log_success "Telegraf SNMP configuration updated with ${#AGENTS_ARRAY[@]} agents"
+        else
+            log_error "No valid SNMP agents found"
+            return 1
+        fi
+    else
+        log_info "SNMP monitoring disabled, skipping Telegraf SNMP configuration"
     fi
 }
 

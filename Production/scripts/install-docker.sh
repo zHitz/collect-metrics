@@ -2,7 +2,7 @@
 
 ################################################################################
 # Docker Installation Script
-# Supports: Ubuntu, Debian, CentOS, RHEL, Rocky Linux, AlmaLinux
+# Uses official Docker installation method: get.docker.com
 ################################################################################
 
 set -euo pipefail
@@ -31,6 +31,14 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Check if running as root
+check_root() {
+    if [ "$(id -u)" -eq 0 ]; then 
+        log_error "Please run this script as a regular user, not as root"
+        exit 1
+    fi
+}
+
 # Detect OS
 detect_os() {
     if [ -f /etc/os-release ]; then
@@ -45,69 +53,25 @@ detect_os() {
     log_info "Detected OS: $OS $OS_VERSION"
 }
 
-# Install Docker on Ubuntu/Debian
-install_docker_debian() {
-    log_info "Installing Docker on Ubuntu/Debian..."
+# Install Docker using official method
+install_docker() {
+    log_info "Installing Docker using official installation method..."
     
-    # Update package index
-    sudo apt-get update
+    # Download Docker installation script
+    log_info "Downloading Docker installation script..."
+    curl -fsSL https://get.docker.com -o get-docker.sh
     
-    # Install prerequisites
-    sudo apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release \
-        software-properties-common
+    # Make script executable
+    chmod +x get-docker.sh
     
-    # Add Docker's official GPG key
-    curl -fsSL https://download.docker.com/linux/$OS/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    # Run Docker installation script
+    log_info "Running Docker installation script..."
+    sudo sh get-docker.sh
     
-    # Set up stable repository
-    echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/$OS \
-        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    # Clean up installation script
+    rm -f get-docker.sh
     
-    # Update package index again
-    sudo apt-get update
-    
-    # Install Docker Engine
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    
-    log_success "Docker installed successfully on Ubuntu/Debian"
-}
-
-# Install Docker on CentOS/RHEL/Rocky/Alma
-install_docker_rhel() {
-    log_info "Installing Docker on RHEL-based system..."
-    
-    # Remove old versions
-    sudo yum remove -y docker \
-                       docker-client \
-                       docker-client-latest \
-                       docker-common \
-                       docker-latest \
-                       docker-latest-logrotate \
-                       docker-logrotate \
-                       docker-engine \
-                       podman \
-                       runc || true
-    
-    # Install prerequisites
-    sudo yum install -y yum-utils device-mapper-persistent-data lvm2
-    
-    # Add Docker repository
-    sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    
-    # Install Docker Engine
-    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    
-    # Start and enable Docker
-    sudo systemctl start docker
-    sudo systemctl enable docker
-    
-    log_success "Docker installed successfully on RHEL-based system"
+    log_success "Docker installed successfully using official method"
 }
 
 # Configure Docker post-installation
@@ -126,12 +90,10 @@ configure_docker() {
     sudo mkdir -p /etc/docker
     cat <<EOF | sudo tee /etc/docker/daemon.json
 {
-    "log-driver": "json-file",
     "log-opts": {
         "max-size": "10m",
         "max-file": "3"
     },
-    "storage-driver": "overlay2",
     "live-restore": true
 }
 EOF
@@ -191,31 +153,18 @@ main() {
     echo ""
     echo "======================================"
     echo "Docker Installation Script"
+    echo "Using official get.docker.com method"
     echo "======================================"
     echo ""
     
     # Check if running as root
-    if [ "$EUID" -eq 0 ]; then 
-        log_error "Please run this script as a regular user, not as root"
-        exit 1
-    fi
+    check_root
     
     # Detect OS
     detect_os
     
-    # Install based on OS
-    case $OS in
-        ubuntu|debian)
-            install_docker_debian
-            ;;
-        centos|rhel|rocky|almalinux|fedora)
-            install_docker_rhel
-            ;;
-        *)
-            log_error "Unsupported OS: $OS"
-            exit 1
-            ;;
-    esac
+    # Install Docker
+    install_docker
     
     # Configure Docker
     configure_docker

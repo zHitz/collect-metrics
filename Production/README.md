@@ -73,6 +73,37 @@ Chỉnh sửa file `.env` theo nhu cầu:
 ./scripts/deploy.sh
 ```
 
+### 4. Restart/Redeploy (nếu cần)
+Để restart hoặc redeploy hệ thống:
+```bash
+# Restart với cập nhật images
+./scripts/restart.sh
+
+# Restart không cập nhật images
+UPDATE_IMAGES=false ./scripts/restart.sh
+
+# Restart với cleanup hoàn toàn (cẩn thận!)
+CLEAN_VOLUMES=true CLEAN_IMAGES=true ./scripts/restart.sh
+```
+
+### 5. Test Profiles (kiểm tra cấu hình)
+Để kiểm tra profiles được bật và services sẽ deploy:
+```bash
+./scripts/test-profiles.sh
+```
+
+### 6. Test SNMP (nếu sử dụng SNMP monitoring)
+Để kiểm tra cấu hình và kết nối SNMP:
+```bash
+./scripts/test-snmp.sh
+```
+
+### 7. Fix Permissions (nếu cần)
+Nếu gặp lỗi permissions, chạy:
+```bash
+./scripts/fix-permissions.sh
+```
+
 ## 🔧 Modules
 
 ### 1. Server Monitoring (Mặc định)
@@ -89,6 +120,30 @@ Chỉnh sửa file `.env` theo nhu cầu:
 - Kích hoạt: `ENABLE_EXEC_SCRIPTS=true`
 - Viết scripts Python/Bash tùy chỉnh
 - Thu thập metrics từ API, databases, v.v.
+
+## 🔧 Troubleshooting
+
+### Lỗi Permissions
+Nếu gặp lỗi như:
+```
+mkdir: can't create directory '/var/lib/grafana/plugins': Permission denied
+GF_PATHS_DATA='/var/lib/grafana' is not writable.
+```
+
+**Giải pháp:**
+```bash
+# Chạy script fix permissions
+./scripts/fix-permissions.sh
+
+# Hoặc fix thủ công
+sudo chown -R 472:472 ./data/grafana
+sudo chown -R 65534:65534 ./data/prometheus
+```
+
+### Lỗi khác
+- Kiểm tra logs: `docker-compose logs [service-name]`
+- Restart services: `docker-compose restart [service-name]`
+- Rebuild: `docker-compose down && docker-compose up -d --build`
 
 ## 📊 Dashboards
 

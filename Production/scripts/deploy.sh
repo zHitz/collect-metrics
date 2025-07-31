@@ -15,19 +15,24 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Load environment variables
-if [ -f "$PROJECT_ROOT/.env" ]; then
-    set -a
-    source "$PROJECT_ROOT/.env"
-    set +a
-else
-    echo -e "${RED}Error: .env file not found!${NC}"
-    echo "Please copy .env.example to .env and configure it."
-    exit 1
+if [ ! -f "$PROJECT_ROOT/.env" ]; then
+    echo -e "${YELLOW}.env file not found. Copying from .env.example...${NC}"
+    if [ -f "$PROJECT_ROOT/.env.example" ]; then
+        cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
+        echo -e "${GREEN}Copied .env.example to .env. Please review and update your configuration if needed.${NC}"
+    else
+        echo -e "${RED}Error: .env.example file not found!${NC}"
+        exit 1
+    fi
 fi
+
+set -a
+source "$PROJECT_ROOT/.env"
+set +a
 
 # Functions
 log_info() {
@@ -77,16 +82,132 @@ check_prerequisites() {
     fi
 }
 
+# Stop and clean existing containers
+cleanup_existing() {
+    log_info "Cleaning up existing containers..."
+    
+    # Check if docker-compose.yml exists
+    if [ ! -f "$PROJECT_ROOT/docker-compose.yml" ]; then
+        log_warning "docker-compose.yml not found, skipping cleanup"
+        return
+    fi
+    
+    # Get profiles for cleanup
+    local profiles=""
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
+        profiles="$profiles --profile snmp"
+    fi
+    if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ]; then
+        profiles="$profiles --profile exec"
+    fi
+    if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
+        profiles="$profiles --profile alerting"
+    fi
+    
+    cd "$PROJECT_ROOT"
+    
+    # Stop all containers with profiles
+    if docker compose $profiles ps -q | grep -q .; then
+        log_info "Stopping existing containers with profiles: $profiles"
+        docker compose $profiles down --remove-orphans
+        log_success "Containers stopped"
+    else
+        log_info "No running containers found"
+    fi
+    
+    # Remove stopped containers
+    log_info "Removing stopped containers..."
+    docker container prune -f
+    
+    # Remove unused networks
+    log_info "Cleaning up unused networks..."
+    docker network prune -f
+}
+
+# Check and pull Docker images
+check_images() {
+    log_info "Checking Docker images..."
+    
+    # Base images (always required)
+    local base_images=(
+        "grafana/grafana:${GRAFANA_VERSION:-10.0.0}"
+        "prom/prometheus:${PROMETHEUS_VERSION:-v2.45.0}"
+        "prom/node-exporter:${NODE_EXPORTER_VERSION:-v1.6.0}"
+    )
+    
+    # Optional images (based on profiles)
+    local optional_images=()
+    
+    # Add InfluxDB if SNMP is enabled (InfluxDB is in snmp profile)
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
+        optional_images+=("influxdb:${INFLUXDB_VERSION:-2.7.0}")
+        optional_images+=("telegraf:${TELEGRAF_VERSION:-1.27.0}")
+    fi
+    
+    # Add AlertManager if alerting is enabled
+    if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
+        optional_images+=("prom/alertmanager:${ALERTMANAGER_VERSION:-v0.28.0}")
+    fi
+    
+    # Combine all images
+    local all_images=("${base_images[@]}" "${optional_images[@]}")
+    
+    log_info "Checking ${#all_images[@]} images based on enabled profiles..."
+    
+    for image in "${all_images[@]}"; do
+        log_info "Checking image: $image"
+        
+        # Check if image exists locally
+        if ! docker image inspect "$image" &> /dev/null; then
+            log_info "Pulling image: $image"
+            if docker pull "$image"; then
+                log_success "Pulled: $image"
+            else
+                log_error "Failed to pull: $image"
+                return 1
+            fi
+        else
+            log_success "Image exists: $image"
+        fi
+    done
+    
+    log_success "All required images checked"
+}
+
+# Show enabled profiles
+show_profiles() {
+    log_info "Checking enabled profiles..."
+    
+    local enabled_profiles=()
+    
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
+        enabled_profiles+=("SNMP Monitoring")
+    fi
+    
+    if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ]; then
+        enabled_profiles+=("Custom Scripts")
+    fi
+    
+    if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
+        enabled_profiles+=("AlertManager")
+    fi
+    
+    if [ ${#enabled_profiles[@]} -eq 0 ]; then
+        log_info "No optional profiles enabled (basic monitoring only)"
+    else
+        log_info "Enabled profiles: ${enabled_profiles[*]}"
+    fi
+}
+
 # Create necessary directories
 create_directories() {
     log_info "Creating necessary directories..."
     
     # Data directories
-    mkdir -p "$PROJECT_ROOT/data"/{influxdb,influxdb-config,grafana,prometheus,alertmanager}
+    mkdir -p "$PROJECT_ROOT/data"/{influxdb,influxdb-config,grafana,prometheus}
     
     # Config directories
     mkdir -p "$PROJECT_ROOT/configs/prometheus/"{rules,targets}
-    mkdir -p "$PROJECT_ROOT/configs/alertmanager"
     
     # Dashboard directories
     mkdir -p "$PROJECT_ROOT/dashboards"/{system,network,custom}
@@ -99,7 +220,146 @@ create_directories() {
         mkdir -p "$PROJECT_ROOT/backups"
     fi
     
-    log_success "Directories created successfully"
+    # Set proper permissions for Docker containers
+    log_info "Setting proper permissions for Docker containers..."
+    
+    # Grafana needs user 472
+    if [ -d "$PROJECT_ROOT/data/grafana" ]; then
+        sudo chown -R 472:472 "$PROJECT_ROOT/data/grafana"
+        sudo chmod -R 755 "$PROJECT_ROOT/data/grafana"
+        log_info "Set Grafana permissions (user 472)"
+    fi
+    
+    # InfluxDB needs user 472 (same as Grafana)
+    if [ -d "$PROJECT_ROOT/data/influxdb" ]; then
+        sudo chown -R 472:472 "$PROJECT_ROOT/data/influxdb"
+        sudo chmod -R 755 "$PROJECT_ROOT/data/influxdb"
+        log_info "Set InfluxDB data permissions (user 472)"
+    fi
+    
+    if [ -d "$PROJECT_ROOT/data/influxdb-config" ]; then
+        sudo chown -R 472:472 "$PROJECT_ROOT/data/influxdb-config"
+        sudo chmod -R 755 "$PROJECT_ROOT/data/influxdb-config"
+        log_info "Set InfluxDB config permissions (user 472)"
+    fi
+    
+    # Prometheus needs user 65534 (nobody)
+    if [ -d "$PROJECT_ROOT/data/prometheus" ]; then
+        sudo chown -R 65534:65534 "$PROJECT_ROOT/data/prometheus"
+        sudo chmod -R 755 "$PROJECT_ROOT/data/prometheus"
+        log_info "Set Prometheus permissions (user 65534)"
+    fi
+    
+    # Make configs readable by containers
+    if [ -d "$PROJECT_ROOT/configs" ]; then
+        sudo chmod -R 644 "$PROJECT_ROOT/configs"
+        sudo find "$PROJECT_ROOT/configs" -type d -exec chmod 755 {} \;
+        log_info "Set configs permissions (readable by containers)"
+    fi
+    
+    log_success "Directories created and permissions set successfully"
+}
+
+# Validate configuration
+validate_config() {
+    log_info "Validating configuration..."
+    
+    # Check required environment variables
+    local required_vars=(
+        "COMPOSE_PROJECT_NAME"
+        "INFLUXDB_USERNAME"
+        "INFLUXDB_PASSWORD"
+        "INFLUXDB_ORG"
+        "INFLUXDB_BUCKET"
+        "GRAFANA_ADMIN_USER"
+        "GRAFANA_ADMIN_PASSWORD"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if [ -z "${!var:-}" ]; then
+            log_error "Required environment variable $var is not set"
+            return 1
+        fi
+    done
+    
+    # Check if docker-compose.yml exists
+    if [ ! -f "$PROJECT_ROOT/docker-compose.yml" ]; then
+        log_error "docker-compose.yml not found in $PROJECT_ROOT"
+        return 1
+    fi
+    
+    # Validate docker-compose.yml syntax
+    if ! docker compose -f "$PROJECT_ROOT/docker-compose.yml" config &> /dev/null; then
+        log_error "Invalid docker-compose.yml syntax"
+        return 1
+    fi
+    
+    log_success "Configuration validated"
+}
+
+# Start services
+start_services() {
+    log_info "Starting monitoring services..."
+    
+    # Build and start services
+    if docker compose -f "$PROJECT_ROOT/docker-compose.yml" up -d --build; then
+        log_success "Services started successfully"
+    else
+        log_error "Failed to start services"
+        return 1
+    fi
+    
+    # Wait for services to be ready
+    log_info "Waiting for services to be ready..."
+    sleep 10
+    
+    # Check service health
+    check_service_health
+}
+
+# Check service health
+check_service_health() {
+    log_info "Checking service health..."
+    
+    # Base services (always required)
+    local base_services=("grafana" "prometheus" "node-exporter")
+    
+    # Optional services (based on profiles)
+    local optional_services=()
+    
+    # Add InfluxDB if SNMP is enabled
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
+        optional_services+=("influxdb" "telegraf")
+    fi
+    
+    # Add AlertManager if alerting is enabled
+    if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
+        optional_services+=("alertmanager")
+    fi
+    
+    # Combine all services
+    local all_services=("${base_services[@]}" "${optional_services[@]}")
+    
+    log_info "Checking ${#all_services[@]} services based on enabled profiles..."
+    
+    local failed_services=()
+    
+    for service in "${all_services[@]}"; do
+        if docker compose -f "$PROJECT_ROOT/docker-compose.yml" ps "$service" | grep -q "Up"; then
+            log_success "$service is running"
+        else
+            log_error "$service is not running"
+            failed_services+=("$service")
+        fi
+    done
+    
+    if [ ${#failed_services[@]} -gt 0 ]; then
+        log_warning "Some services failed to start: ${failed_services[*]}"
+        log_info "Check logs with: docker compose logs [service-name]"
+        return 1
+    fi
+    
+    log_success "All services are healthy"
 }
 
 # Generate configuration files
@@ -114,24 +374,17 @@ generate_configs() {
 
 # Prepare Docker profiles based on enabled modules
 prepare_docker_profiles() {
-    PROFILES=""
-    
-    if [ "${ENABLE_SNMP}" = "true" ]; then
-        PROFILES="$PROFILES --profile snmp"
-        log_info "SNMP monitoring enabled"
+    local profiles=""
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
+        profiles="$profiles --profile snmp"
     fi
-    
-    if [ "${ENABLE_EXEC_SCRIPTS}" = "true" ]; then
-        PROFILES="$PROFILES --profile exec"
-        log_info "Exec scripts monitoring enabled"
+    if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ]; then
+        profiles="$profiles --profile exec"
     fi
-    
-    if [ "${ENABLE_ALERTMANAGER}" = "true" ]; then
-        PROFILES="$PROFILES --profile alerting"
-        log_info "AlertManager enabled"
+    if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
+        profiles="$profiles --profile alerting"
     fi
-    
-    echo "$PROFILES"
+    echo "$profiles"
 }
 
 # Deploy services
@@ -143,42 +396,27 @@ deploy_services() {
     # Get profiles
     PROFILES=$(prepare_docker_profiles)
     
-    # Pull latest images
-    log_info "Pulling Docker images..."
-    docker compose $PROFILES pull
+    # Start services with profiles
+    log_info "Starting services with profiles: $PROFILES"
+    if docker compose $PROFILES up -d --build; then
+        log_success "Services started successfully"
+    else
+        log_error "Failed to start services"
+        return 1
+    fi
     
-    # Start services
-    log_info "Starting services..."
-    docker compose $PROFILES up -d
+    # Wait for services to be ready
+    log_info "Waiting for services to be ready..."
+    sleep 15
     
-    # Wait for services to be healthy
-    log_info "Waiting for services to be healthy..."
-    sleep 10
+    # Check service health
+    check_service_health
     
-    # Check service status
-    docker compose ps
-    
-    log_success "Services deployed successfully"
+    # Show service status
+    log_info "Service status:"
+    docker compose $PROFILES ps
 }
 
-# Configure Prometheus targets
-configure_prometheus_targets() {
-    log_info "Configuring Prometheus targets..."
-    
-    # Create example node exporter targets file
-    cat > "$PROJECT_ROOT/configs/prometheus/targets/node-example.yml" <<EOF
-# Node Exporter Targets
-# Add your remote node exporters here
-- targets:
-  # - 'server1.example.com:9100'
-  # - 'server2.example.com:9100'
-  labels:
-    job: 'node-exporter-remote'
-    environment: 'production'
-EOF
-    
-    log_success "Prometheus targets configured"
-}
 
 # Import default dashboards
 import_dashboards() {
@@ -222,13 +460,13 @@ show_summary() {
     echo "    Bucket: ${INFLUXDB_BUCKET}"
     echo ""
     
-    if [ "${ENABLE_SNMP}" = "true" ]; then
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
         echo "SNMP Monitoring: ENABLED"
         echo "  Configure devices in .env file"
         echo ""
     fi
     
-    if [ "${ENABLE_EXEC_SCRIPTS}" = "true" ]; then
+    if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ]; then
         echo "Custom Scripts: ENABLED"
         echo "  Place scripts in exec-scripts/ directory"
         echo ""
@@ -255,14 +493,23 @@ main() {
     # Check prerequisites
     check_prerequisites
     
+    # Cleanup existing containers
+    cleanup_existing
+    
+    # Show enabled profiles
+    show_profiles
+    
+    # Check and pull Docker images
+    check_images
+    
     # Create directories
     create_directories
     
     # Generate configurations
     generate_configs
     
-    # Configure Prometheus targets
-    configure_prometheus_targets
+    # Validate configuration
+    validate_config
     
     # Deploy services
     deploy_services
