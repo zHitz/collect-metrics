@@ -1,0 +1,46 @@
+# Grafana Datasources Configuration
+apiVersion: 1
+
+datasources:
+  # InfluxDB 2.x Datasource
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: ${INFLUX_ORG}
+      defaultBucket: ${INFLUX_BUCKET}
+      tlsSkipVerify: true
+    secureJsonData:
+      token: ${INFLUX_TOKEN}
+    isDefault: true
+    editable: false
+
+  # Prometheus Datasource
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - datasourceUid: tempo
+          name: trace_id
+    isDefault: false
+    editable: false
+
+  # InfluxQL for legacy queries (optional)
+  - name: InfluxDB-QL
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: InfluxQL
+      httpMode: POST
+      organization: ${INFLUX_ORG}
+      defaultBucket: ${INFLUX_BUCKET}
+    secureJsonData:
+      token: ${INFLUX_TOKEN}
+    isDefault: false
+    editable: false
