@@ -24,8 +24,8 @@ check_error() {
 # --- Đảm bảo luôn có file .env trước khi chạy tiếp ---
 ENV_FILE=".env"
 if [ ! -f "$ENV_FILE" ] || [ ! -s "$ENV_FILE" ]; then
-    log "${RED}Không tìm thấy hoặc file $ENV_FILE rỗng. Vui lòng tạo file .env từ .env.example và điền thông tin cấu hình.${NC}"
-    exit 1
+    "$BASE_DIR/generate_env.sh"
+    check_error "Không thể tạo file .env tự động"
 fi
 source "$ENV_FILE"
 log "Đã tải cấu hình từ $ENV_FILE"
