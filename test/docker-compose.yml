@@ -1,0 +1,32 @@
+services:
+  # Portainer - Container Management
+  portainer:
+    image: portainer/portainer-ce:${PORTAINER_VERSION:-lts}
+    container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-portainer
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${PORTAINER_PORT:-9443}:9443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PORTAINER_DATA_PATH:-./data/portainer}:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["NONE"]
+    profiles:
+      - portainer
+
+networks:
+  monitoring:
+    name: ${DOCKER_NETWORK:-monitoring-network}
+    driver: bridge

@@ -297,25 +297,6 @@ validate_config() {
     log_success "Configuration validated"
 }
 
-# Start services
-start_services() {
-    log_info "Starting monitoring services..."
-    
-    # Build and start services
-    if docker compose -f "$PROJECT_ROOT/docker-compose.yml" up -d --build; then
-        log_success "Services started successfully"
-    else
-        log_error "Failed to start services"
-        return 1
-    fi
-    
-    # Wait for services to be ready
-    log_info "Waiting for services to be ready..."
-    sleep 10
-    
-    # Check service health
-    check_service_health
-}
 
 # Check service health
 check_service_health() {
@@ -393,12 +374,15 @@ deploy_services() {
     
     cd "$PROJECT_ROOT"
     
+    # Build Telegraf image if needed (before starting services)
+    build_telegraf_if_needed
+    
     # Get profiles
     PROFILES=$(prepare_docker_profiles)
     
-    # Start services with profiles
+    # Start services with profiles (without --build to avoid verbose output)
     log_info "Starting services with profiles: $PROFILES"
-    if docker compose $PROFILES up -d --build; then
+    if docker compose $PROFILES up -d; then
         log_success "Services started successfully"
     else
         log_error "Failed to start services"
@@ -417,6 +401,31 @@ deploy_services() {
     docker compose $PROFILES ps
 }
 
+# Build Telegraf image if SNMP is enabled
+build_telegraf_if_needed() {
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
+        log_info "Building Telegraf image..."
+        
+        # Show progress indicator
+        echo -n "Building Telegraf: "
+        
+        # Build with quiet output
+        docker build \
+            --build-arg TELEGRAF_VERSION="${TELEGRAF_VERSION:-1.27.0}" \
+            --tag "${COMPOSE_PROJECT_NAME:-monitoring}-telegraf" \
+            --quiet \
+            "$PROJECT_ROOT" >/dev/null 2>&1
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✓${NC}"
+            log_success "Telegraf image built successfully!"
+        else
+            echo -e "${RED}✗${NC}"
+            log_error "Failed to build Telegraf image!"
+            return 1
+        fi
+    fi
+}
 
 # Import default dashboards
 import_dashboards() {
@@ -436,6 +445,11 @@ import_dashboards() {
     log_success "Dashboards imported"
 }
 
+deploy_portainer() {
+    chmod +x "$PROJECT_ROOT/portainer/portainer-deploy.sh"
+    "$PROJECT_ROOT/portainer/portainer-deploy.sh"
+}
+
 # Show deployment summary
 show_summary() {
     echo ""
@@ -444,28 +458,28 @@ show_summary() {
     echo "=================================="
     echo ""
     echo "Services deployed:"
-    echo "  - InfluxDB: http://localhost:${INFLUXDB_PORT}"
+    if [ "${ENABLE_SNMP:-false}" = "true" ]; then
+        echo "  - InfluxDB: http://localhost:${INFLUXDB_PORT}"
+    fi
     echo "  - Grafana: http://localhost:${GRAFANA_PORT}"
     echo "  - Prometheus: http://localhost:${PROMETHEUS_PORT}"
+    if [ "${ENABLE_PORTAINER:-false}" = "true" ]; then
+        echo "  - Portainer: https://localhost:${PORTAINER_PORT}"
+    fi
     echo ""
     echo "Credentials:"
     echo "  - Grafana:"
     echo "    Username: ${GRAFANA_ADMIN_USER}"
     echo "    Password: ${GRAFANA_ADMIN_PASSWORD}"
     echo ""
-    echo "  - InfluxDB:"
-    echo "    Username: ${INFLUXDB_USERNAME}"
-    echo "    Password: ${INFLUXDB_PASSWORD}"
-    echo "    Organization: ${INFLUXDB_ORG}"
-    echo "    Bucket: ${INFLUXDB_BUCKET}"
-    echo ""
-    
     if [ "${ENABLE_SNMP:-false}" = "true" ]; then
-        echo "SNMP Monitoring: ENABLED"
-        echo "  Configure devices in .env file"
+        echo "  - InfluxDB:"
+        echo "    Username: ${INFLUXDB_USERNAME}"
+        echo "    Password: ${INFLUXDB_PASSWORD}"
+        echo "    Organization: ${INFLUXDB_ORG}"
+        echo "    Bucket: ${INFLUXDB_BUCKET}"
         echo ""
-    fi
-    
+    fi    
     if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ]; then
         echo "Custom Scripts: ENABLED"
         echo "  Place scripts in exec-scripts/ directory"
@@ -473,9 +487,10 @@ show_summary() {
     fi
     
     echo "Next steps:"
-    echo "  1. Access Grafana at http://localhost:${GRAFANA_PORT}"
-    echo "  2. Configure additional monitoring targets"
-    echo "  3. Import or create custom dashboards"
+    echo "  1. Access and change Portainer password at https://localhost:${PORTAINER_PORT}"
+    echo "  2. Access Grafana at http://localhost:${GRAFANA_PORT}"
+    echo "  3. Configure additional monitoring targets"
+    echo "  4. Import or create custom dashboards"
     echo ""
     echo "To view logs: docker compose logs -f [service-name]"
     echo "To stop services: docker compose down"
@@ -513,6 +528,9 @@ main() {
     
     # Deploy services
     deploy_services
+    
+    # Deploy Portainer
+    deploy_portainer
     
     # Import dashboards
     import_dashboards

@@ -1,8 +1,29 @@
 #!/bin/bash
-source "$(dirname "$0")/../.env"
-echo "  agents = [\"udp://$TELEGRAF_SNMP_HOST:161\"]" >> "./telegraf.conf"
-echo "$TELEGRAF_CONFIG_DIR"
-echo "  community = \"$TELEGRAF_SNMP_COMMUNITY\""
 
+# Hàm tạo mật khẩu ngẫu nhiên
+generate_password() {
+    local length=${1:-16}
+    openssl rand -base64 $length | tr -d "=+/" | cut -c1-$length
+    echo
+}
 
-snmpget -v 2c -c hissc 172.18.10.2 1.3.6.1.4.1.9.6.1.101.1.9.0
+# Hàm hash mật khẩu bằng bcrypt
+hash_bcrypt() {
+    local password="$1"
+
+    if command -v htpasswd &> /dev/null; then
+        htpasswd -nbB admin "$password" | cut -d ':' -f2
+    elif command -v python3 &> /dev/null; then
+        python3 -c "import bcrypt; print(bcrypt.hashpw(b'$password', bcrypt.gensalt()).decode())"
+    else
+        echo "Error: Không có htpasswd hoặc python3 để tạo bcrypt hash." >&2
+        return 1
+    fi
+}
+
+# Ví dụ sử dụng
+PASSWORD=$(generate_password 16)
+HASHED=$(hash_bcrypt "$PASSWORD")
+
+echo "🔐 Mật khẩu ngẫu nhiên: $PASSWORD"
+echo "🔒 Bcrypt hash để dùng trong docker-compose: $HASHED"
