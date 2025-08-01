@@ -42,6 +42,8 @@ Thumbs.db
 # Custom scripts (keep examples only)
 exec-scripts/*
 !exec-scripts/examples/
+!exec-scripts/cisco/
+!exec-scripts/hillstone/
 !exec-scripts/README.md
 
 # Grafana provisioned dashboards (keep templates)
