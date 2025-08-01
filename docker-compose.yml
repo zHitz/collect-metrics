@@ -1,54 +1,226 @@
-version: '3.8'
-
 services:
-  influxdb:
-    image: influxdb:${INFLUXDB_VERSION}
-    container_name: influxdb
-    networks:
-      - influxdb-telegraf-net
-    volumes:
-      - ${INFLUXDB_DATA_DIR}:/var/lib/influxdb2
-    expose:
-      - "8086"
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
-      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
-      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
-      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+  # ===============================================
+  # Core Services (Always Enabled)
+  # ===============================================
+  
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-grafana:12.2.0-16636675413}
+    container_name: ${COMPOSE_PROJECT_NAME}-grafana
     restart: unless-stopped
-
-  telegraf:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        TELEGRAF_VERSION: ${TELEGRAF_VERSION} 
-    container_name: telegraf
     networks:
-      - influxdb-telegraf-net
-    volumes:
-      - ${TELEGRAF_CONFIG_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ./scripts/cisco:/scripts/cisco:ro
-      - ./scripts/hillstone:/scripts/hillstone:ro
-    environment:
-      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
-      - INFLUXDB_ORG=${INFLUXDB_ORG}
-      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:latest
-    container_name: nginx-proxy
-    networks:
-      - influxdb-telegraf-net
+      - monitoring
     ports:
-      - "8087:8087"
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_INSTALL_PLUGINS: ${GRAFANA_PLUGINS:-}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
+      GF_SERVER_ENABLE_GZIP: 'true'
+      GF_SECURITY_DISABLE_GRAVATAR: 'true'
+      GF_SECURITY_COOKIE_SECURE: 'true'
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ${GRAFANA_DATA_PATH:-./data/grafana}:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: ${GRAFANA_MEMORY_LIMIT:-1g}
+          cpus: '${GRAFANA_CPU_LIMIT:-1}'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.5.0}
+    container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-prometheus
     restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME:-30d}'
+      - '--storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-10GB}'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--web.enable-remote-write-receiver'
+    volumes:
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./configs/prometheus/targets:/etc/prometheus/targets:ro
+      - ${PROMETHEUS_DATA_PATH:-./data/prometheus}:/prometheus
+    deploy:
+      resources:
+        limits:
+          memory: ${PROMETHEUS_MEMORY_LIMIT:-2g}
+          cpus: '${PROMETHEUS_CPU_LIMIT:-2}'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Node Exporter - Server Metrics
+  node-exporter:
+    image: prom/node-exporter:${NODE_EXPORTER_VERSION:-v1.9.0}
+    container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-node-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.5'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+
+  # ===============================================
+  # Optional Services (Enabled by Profiles)
+  # ===============================================
+
+  # InfluxDB - Time Series Database
+  influxdb:
+    image: influxdb:${INFLUXDB_VERSION:-2.7.0}
+    container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-influxdb
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${INFLUXDB_PORT:-8086}:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET}
+      DOCKER_INFLUXDB_INIT_RETENTION: ${INFLUXDB_RETENTION:-30d}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_TOKEN}
+    volumes:
+      - ${INFLUXDB_DATA_PATH:-./data/influxdb}:/var/lib/influxdb2
+      - ${INFLUXDB_CONFIG_PATH:-./data/influxdb-config}:/etc/influxdb2
+    deploy:
+      resources:
+        limits:
+          memory: ${INFLUXDB_MEMORY_LIMIT:-2g}
+          cpus: '${INFLUXDB_CPU_LIMIT:-2}'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles:
+      - snmp
+
+  # Telegraf SNMP - Network Device Monitoring
+  telegraf:
+    image: ${COMPOSE_PROJECT_NAME:-monitoring}-telegraf:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-telegraf
+    restart: unless-stopped
+    networks:
+      - monitoring
+    environment:
+      INFLUX_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUX_ORG: ${INFLUXDB_ORG}
+      INFLUX_BUCKET: ${INFLUXDB_BUCKET}
+      INFLUX_URL: http://influxdb:8086
+    volumes:
+      - ./configs/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./exec-scripts:/scripts:ro
+    depends_on:
+      - influxdb
+    deploy:
+      resources:
+        limits:
+          memory: ${TELEGRAF_MEMORY_LIMIT:-512m}
+          cpus: '${TELEGRAF_CPU_LIMIT:-1}'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep telegraf || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles:
+      - snmp
+
+  # AlertManager (Optional)
+  alertmanager:
+    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.25.0}
+    container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-alertmanager
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./data/alertmanager:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+    logging:
+      driver: ${LOG_DRIVER:-json-file}
+      options:
+        max-size: ${LOG_MAX_SIZE:-10m}
+        max-file: '${LOG_MAX_FILE:-3}'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9093/-/healthy || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles:
+      - alerting
 
 networks:
-  influxdb-telegraf-net:
+  monitoring:
+    name: ${DOCKER_NETWORK:-monitoring-network}
     driver: bridge

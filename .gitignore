@@ -1,18 +1,55 @@
-# Test environment files
-test/.env
-test/.env.*
-# Virtual environment
-venv/
-env/
-.venv/
-.env/
-test/venv/
-test/env/
-test/.venv/
-test/.env/
+# Environment files
+.env
+.env.local
+.env.*.local
 
-# Logs file
-test/device_logs.log
+# Data directories
+data/
+backups/
+logs/
+portainer/data/
+
+# Generated files
 *.log
+*.pid
+*.swp
+*.swo
+*~
 
+# OS files
+.DS_Store
+Thumbs.db
 
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Docker
+.docker/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Certificates and keys
+*.key
+*.crt
+*.pem
+*.p12
+
+# Custom scripts (keep examples only)
+exec-scripts/*
+!exec-scripts/examples/
+!exec-scripts/README.md
+
+# Grafana provisioned dashboards (keep templates)
+dashboards/*/*.json
+!dashboards/system/.gitkeep
+!dashboards/network/.gitkeep
+!dashboards/custom/.gitkeep
+
+# Prometheus targets (keep examples)
+configs/prometheus/targets/*
+!configs/prometheus/targets/.gitkeep

@@ -1,198 +1,215 @@
-# 📊 InfluxDB & Telegraf Deployment 🚀
+# 🚀 Hệ Thống Giám Sát Tài Nguyên Tích Hợp
 
-![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker) ![Ubuntu](https://img.shields.io/badge/OS-Ubuntu-green?logo=ubuntu) ![CentOS](https://img.shields.io/badge/OS-CentOS-red?logo=centos) ![InfluxDB](https://img.shields.io/badge/InfluxDB-Metrics-purple?logo=influxdb)
+## 📋 Tổng Quan
 
-A professional, modular, and production-ready deployment solution for InfluxDB and Telegraf using Docker Compose. This project automates the setup of a monitoring stack to collect system metrics (e.g., CPU, memory, disk) and SNMP data, store them in InfluxDB, and provides debug scripts to validate the setup.
+Hệ thống giám sát tài nguyên toàn diện, được thiết kế để triển khai nhanh chóng và linh hoạt cho mọi khách hàng. Hệ thống sử dụng các công nghệ hàng đầu để thu thập, lưu trữ và hiển thị metrics từ servers và network devices.
 
-## ✨ Features
+## 🏗️ Kiến Trúc
 
-- 🐳 **Docker Compose-Based**: Deploys InfluxDB and Telegraf as containerized services with a single command.
-- 🧱 **Modular Design**: Separates deployment logic into scripts for easy maintenance and extension.
-- 🔧 **Configurable Plugins**: Supports Telegraf plugins (`cpu`, `memory`, `disk`, `snmp`) via environment variables.
-- 🌐 **SNMP Support**: Includes automatic MIB file handling for SNMP monitoring.
-- 🛠 **Debug Tools**: Built-in scripts to test and validate Telegraf and InfluxDB configurations.
-- ✅ **Production-Ready**: Resource limits, automatic restarts, and logging for stability.
-
-## 🗂 Project Structure
-
-```bash
-influxdb-telegraf-deploy/
-├── .env                   # 🌐 Environment variables for configuration
-├── docker-compose.yml     # 🐳 Docker Compose service definitions
-├── scripts/               # ⚙️ Deployment scripts
-│   ├── deploy.sh          # 🚀 Main deployment script
-│   ├── install_docker.sh  # 🐋 Installs Docker and Docker Compose
-│   ├── setup_network.sh   # 🌐 Sets up Docker network
-│   └── config_telegraf.sh # 🔧 Generates Telegraf configuration
-├── config/                # 📝 Telegraf configuration directory
-│   └── telegraf.conf      # ⚙️ Generated Telegraf config file
-├── debug/                 # 🧰 Debug and test scripts
-│   ├── test_telegraf.sh   # 🧪 Tests Telegraf functionality
-│   └── test_influxdb.sh   # 🧪 Tests InfluxDB functionality
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Prometheus +   │────▶│    InfluxDB      │◀────│    Grafana      │
+│  Node Exporter  │     │  (Time Series    │     │ (Visualization) │
+│  (Servers)      │     │   Database)      │     └─────────────────┘
+└─────────────────┘     └──────────────────┘
+                               ▲      ▲
+┌─────────────────┐           │      │
+│  Telegraf SNMP  │───────────┘      │
+│  (Network       │                  │
+│   Devices)      │                  │
+└─────────────────┘                  │
+                                     │
+┌─────────────────┐                  │
+│ Telegraf Exec   │──────────────────┘
+│ (Custom Scripts)│
+└─────────────────┘
 ```
 
-## 📝 Prerequisites
+## ✨ Tính Năng
 
-- 🐧 **OS**: 
-  - Ubuntu (tested on 20.04/22.04)
-  - CentOS (tested on 7/8/Stream)
-- 📦 **Dependencies**:
-  - Docker
-  - Docker Compose (v2.24.7 or later recommended)
-- 🌐 **Network Access**: For SNMP, ensure devices are reachable (e.g., `172.18.xxx.xxx:161`).
+### 🔹 Core Features
+- **InfluxDB 2.x**: Time-series database hiệu suất cao
+- **Grafana**: Dashboard visualization mạnh mẽ
+- **Prometheus**: Giám sát servers với node_exporter
+- **Deployment tự động**: Scripts cài đặt và cấu hình
 
-## 🛠 Installation
+### 🔹 Modules Tùy Chọn
+- **SNMP Monitoring**: Giám sát network devices (routers, switches)
+- **Custom Scripts**: Thu thập metrics tùy chỉnh qua exec scripts
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/zHitz/collect-metrics.git
-   cd collect-metrics
-   ```
-2. **Set Up Permissions**:
-   ```bash
-   chmod +x scripts/*.sh debug/*.sh
-   ```
+## 📦 Cấu Trúc Project
 
-3. **Configure Environment Variables**:
-   Edit `.env` to customize your setup:
-   ```bash
-   nano .env
-   ```
-   Example `.env`:
-   ```env
-   # InfluxDB Config
-   INFLUXDB_VERSION=2.7.0
-   INFLUXDB_USERNAME=admin
-   INFLUXDB_PASSWORD=SecureP@ssw0rd2025
-   INFLUXDB_ORG=ProdMonitoring
-   INFLUXDB_BUCKET=ServerMetrics
-   INFLUXDB_TOKEN=xyz123-abc456-def789-ghi012-jkl345
-   INFLUXDB_DATA_DIR=/opt/influxdb/data
-
-   # Telegraf Config
-   TELEGRAF_VERSION=1.25.0
-   TELEGRAF_CONFIG_DIR=${PWD}/config
-   TELEGRAF_CONFIG_MANUAL=NO        # Set to YES if you want to configure Telegraf manually
-   TELEGRAF_PLUGINS=cpu,memory,disk,snmp
-
-   # SNMP Plugin Config (Required if using SNMP plugin)
-   TELEGRAF_SNMP_HOST=172.18.xxx.xxx
-   TELEGRAF_SNMP_COMMUNITY='your_community_string'
-
-   # Network Config
-   NETWORK_NAME=influxdb-telegraf-net
-
-   # Resource Limits
-   MEMORY_LIMIT=512m
-   CPU_LIMIT=1
-   ```
-
-### Telegraf Configuration Options
-
-You can choose between automatic or manual configuration for Telegraf:
-
-- **Automatic Configuration (Default)**:
-  Set `TELEGRAF_CONFIG_MANUAL=NO` in your .env file. The script will automatically configure Telegraf based on the plugins specified in `TELEGRAF_PLUGINS`.
-
-- **Manual Configuration**:
-  Set `TELEGRAF_CONFIG_MANUAL=YES` in your .env file. This will skip the automatic configuration, allowing you to manually configure Telegraf as needed.
-
-## Deployment
-
-Run the main deployment script:
-```bash
-sudo ./scripts/deploy.sh
+```
+new_project/
+├── docker-compose.yml      # Docker Compose với profiles
+├── .env.example           # Template cấu hình
+├── configs/               # Cấu hình cho các services
+│   ├── prometheus/       # Prometheus configs
+│   ├── grafana/         # Grafana provisioning
+│   └── telegraf/        # Telegraf configs (base, snmp, exec)
+├── scripts/              # Scripts deployment
+├── dashboards/          # Grafana dashboards
+├── exec-scripts/        # Custom monitoring scripts
+└── docs/               # Tài liệu chi tiết
 ```
 
-- **What it does**:
-  - Installs Docker and Docker Compose if not present.
-  - Creates a Docker network (`influxdb-telegraf-net`).
-  - Generates Telegraf configuration with specified plugins.
-  - Downloads SNMP MIB files (if `snmp` is enabled).
-  - Deploys InfluxDB and Telegraf containers.
+## 🚀 Triển Khai Nhanh
 
-- **Output**: Check container status and logs after deployment:
-  ```
-  docker ps -a
-  docker logs telegraf
-  ```
-
-## Debugging
-
-Enable debugging by setting `DEBUG=yes` in `.env`, then redeploy:
+### 1. Clone và chuẩn bị
 ```bash
-sudo ./scripts/deploy.sh
+git clone <repository>
+cd new_project
+cp .env.example .env
 ```
 
-This runs additional tests:
-- `debug/test_telegraf.sh`: Verifies SNMP, logs, and network connectivity.
-- `debug/test_influxdb.sh`: Checks databases, measurements, and data insertion.
+### 2. Cấu hình
+Chỉnh sửa file `.env` theo nhu cầu:
+- Bật/tắt các modules
+- Cấu hình thông tin kết nối
+- Thiết lập credentials
 
-Run tests manually:
+### 3. Deploy
 ```bash
-sudo bash ./debug/test_telegraf.sh
-sudo bash ./debug/test_influxdb.sh
+./scripts/deploy.sh
 ```
 
-## 🔧 Configuration
-
-### 🧩 Telegraf Plugins
-Edit `TELEGRAF_PLUGINS` in `.env` to enable/disable plugins:
-- 🖥️ `cpu`: Collects CPU metrics.
-- 🧠 `memory`: Collects memory usage.
-- 💾 `disk`: Collects disk usage.
-- 📡 `snmp`: Collects SNMP data (requires MIB files).
-
-Example:
+### 4. Restart/Redeploy (nếu cần)
+Để restart hoặc redeploy hệ thống:
 ```bash
-TELEGRAF_PLUGINS=cpu,snmp
+# Restart với cập nhật images
+./scripts/restart.sh
+
+# Restart không cập nhật images
+UPDATE_IMAGES=false ./scripts/restart.sh
+
+# Restart với cleanup hoàn toàn (cẩn thận!)
+CLEAN_VOLUMES=true CLEAN_IMAGES=true ./scripts/restart.sh
 ```
 
-### 🌐 SNMP Setup
-- Ensure SNMP devices are accessible (e.g., `172.18.xxx.xxx:161`).
-- Customize SNMP configuration in `scripts/config_telegraf.sh` under the `snmp` case (e.g., agents, community string).
+### 5. Test Profiles (kiểm tra cấu hình)
+Để kiểm tra profiles được bật và services sẽ deploy:
+```bash
+./scripts/test-profiles.sh
+```
 
-## 🌐 Accessing InfluxDB
+### 6. Test SNMP (nếu sử dụng SNMP monitoring)
+Để kiểm tra cấu hình và kết nối SNMP:
+```bash
+./scripts/test-snmp.sh
+```
 
-- **🌐 URL**: `http://localhost:8086`
-- **👤 Credentials**: Use `INFLUXDB_USERNAME` and `INFLUXDB_PASSWORD` from `.env`.
-- **🔑 Token**: Use `INFLUXDB_TOKEN` for API access.
-- **🗂️ Bucket**: Data is stored in the bucket specified by `INFLUXDB_BUCKET`.
+### 7. Fix Permissions (nếu cần)
+Nếu gặp lỗi permissions, chạy:
+```bash
+./scripts/fix-permissions.sh
+```
 
-## 🐛 Troubleshooting
+## 🔧 Modules
 
-- **❌ Telegraf SNMP Errors**:
-  - Check `docker logs telegraf` for related errors.
-- **🔌 InfluxDB Connection**:
-  - Ensure `influxdb` container is running (`docker ps`).
-  - Check logs: `docker logs influxdb`.
-- **🌐 Network Issues**:
-  - Verify network: `docker network ls | grep influxdb-telegraf-net`.
+### 1. Server Monitoring (Mặc định)
+- Sử dụng Prometheus + Node Exporter
+- Thu thập: CPU, Memory, Disk, Network, Load
+- Dashboard sẵn có cho Linux servers
 
-## Extending the Project
+### 2. Network Device Monitoring (Tùy chọn)
+- Kích hoạt: `ENABLE_SNMP=true`
+- Hỗ trợ: Cisco, Juniper, HP, Dell switches/routers
+- Thu thập: Interface stats, CPU, Memory
 
-- **Add Grafana**: Extend `docker-compose.yml` to include Grafana for visualization.
-- **Custom Plugins**: Modify `scripts/config_telegraf.sh` to support additional Telegraf plugins.
-- **Backup**: Add volume backups for `${INFLUXDB_DATA_DIR}`.
-- **Add Portainer**: Add Portainer to manage Docker for production. 
+### 3. Custom Monitoring (Tùy chọn)
+- Kích hoạt: `ENABLE_EXEC_SCRIPTS=true`
+- Viết scripts Python/Bash tùy chỉnh
+- Thu thập metrics từ API, databases, v.v.
 
-## Contributing
+## 🔧 Troubleshooting
 
-Feel free to submit issues or pull requests on GitHub. Contributions are welcome!
+### Lỗi Permissions
+Nếu gặp lỗi như:
+```
+mkdir: can't create directory '/var/lib/grafana/plugins': Permission denied
+GF_PATHS_DATA='/var/lib/grafana' is not writable.
+```
 
-## License
+**Giải pháp:**
+```bash
+# Chạy script fix permissions
+./scripts/fix-permissions.sh
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+# Hoặc fix thủ công
+sudo chown -R 472:472 ./data/grafana
+sudo chown -R 65534:65534 ./data/prometheus
+```
 
-## OS Compatibility
+### Lỗi khác
+- Kiểm tra logs: `docker-compose logs [service-name]`
+- Restart services: `docker-compose restart [service-name]`
+- Rebuild: `docker-compose down && docker-compose up -d --build`
 
-This project has been updated to support both Ubuntu and CentOS/RHEL-based distributions:
+## 📊 Dashboards
 
-- **Ubuntu/Debian**: Fully tested and supported
-- **CentOS/RHEL**: Fully tested and supported
+### Có sẵn
+- **Server Overview**: Tổng quan servers Linux/Windows
+- **Network Devices**: Giám sát switches/routers
+- **Alert Dashboard**: Tổng hợp cảnh báo
 
-The deployment scripts automatically detect your operating system and apply the appropriate installation methods.
+### Tùy chỉnh
+- Import dashboards từ Grafana Labs
+- Tạo dashboards theo yêu cầu riêng
+
+## 🔐 Bảo Mật
+
+- Mật khẩu mạnh tự động generate
+- HTTPS cho Grafana (optional)
+- Network isolation với Docker networks
+- Secrets management qua environment variables
+
+## 📈 Mở Rộng
+
+### Thêm servers mới
+1. Cài đặt node_exporter trên server mới
+2. Thêm target vào Prometheus config
+3. Reload Prometheus
+
+### Thêm network devices
+1. Enable SNMP trên device
+2. Thêm vào TELEGRAF_SNMP_HOSTS
+3. Restart Telegraf SNMP
+
+### Thêm custom metrics
+1. Viết script trong exec-scripts/
+2. Thêm vào telegraf-exec.conf
+3. Restart Telegraf Exec
+
+## 🛠️ Maintenance
+
+### Backup
+```bash
+./scripts/backup.sh
+```
+
+### Update
+```bash
+./scripts/update.sh
+```
+
+### Monitoring Health
+- Grafana: http://localhost:3000
+- InfluxDB: http://localhost:8086
+- Prometheus: http://localhost:9090
+
+## 📚 Tài Liệu
+
+- [Hướng dẫn triển khai](docs/DEPLOYMENT.md)
+- [Cấu hình chi tiết](docs/CONFIGURATION.md)
+- [Xử lý sự cố](docs/TROUBLESHOOTING.md)
+
+## 🤝 Hỗ Trợ
+
+- Email: support@example.com
+- Documentation: [Wiki](wiki-link)
+- Issues: [GitHub Issues](issues-link)
 
 ---
-Created with ❤️ by Hitz on March 12, 2025
-```
+**Version**: 2.0.0  
+**License**: MIT  
+**Maintainer**: DevOps Team
