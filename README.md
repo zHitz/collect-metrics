@@ -1,10 +1,23 @@
 # 🚀 Hệ Thống Giám Sát Tài Nguyên Tích Hợp
 
+[![Docker](https://img.shields.io/badge/Docker-Required-blue.svg)](https://www.docker.com/)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-Required-blue.svg)](https://docs.docker.com/compose/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 ## 📋 Tổng Quan
 
 Hệ thống giám sát tài nguyên toàn diện, được thiết kế để triển khai nhanh chóng và linh hoạt cho mọi khách hàng. Hệ thống sử dụng các công nghệ hàng đầu để thu thập, lưu trữ và hiển thị metrics từ servers và network devices.
 
-## 🏗️ Kiến Trúc
+### ✨ Tính Năng Chính
+
+- **🔍 Server Monitoring**: Giám sát toàn diện servers Linux/Windows với Prometheus + Node Exporter
+- **🌐 Network Monitoring**: Giám sát network devices (routers, switches) qua SNMP
+- **📊 Custom Metrics**: Thu thập metrics tùy chỉnh qua exec scripts
+- **📈 Visualization**: Dashboard đẹp mắt với Grafana
+- **🚨 Alerting**: Hệ thống cảnh báo thông minh
+- **🔧 Auto Deployment**: Scripts tự động hóa triển khai và cấu hình
+
+## 🏗️ Kiến Trúc Hệ Thống
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
@@ -25,56 +38,98 @@ Hệ thống giám sát tài nguyên toàn diện, được thiết kế để t
 └─────────────────┘
 ```
 
-## ✨ Tính Năng
-
-### 🔹 Core Features
-- **InfluxDB 2.x**: Time-series database hiệu suất cao
-- **Grafana**: Dashboard visualization mạnh mẽ
-- **Prometheus**: Giám sát servers với node_exporter
-- **Deployment tự động**: Scripts cài đặt và cấu hình
-
-### 🔹 Modules Tùy Chọn
-- **SNMP Monitoring**: Giám sát network devices (routers, switches)
-- **Custom Scripts**: Thu thập metrics tùy chỉnh qua exec scripts
-
 ## 📦 Cấu Trúc Project
 
 ```
-new_project/
-├── docker-compose.yml      # Docker Compose với profiles
-├── .env.example           # Template cấu hình
-├── configs/               # Cấu hình cho các services
-│   ├── prometheus/       # Prometheus configs
-│   ├── grafana/         # Grafana provisioning
-│   └── telegraf/        # Telegraf configs (base, snmp, exec)
-├── scripts/              # Scripts deployment
-├── dashboards/          # Grafana dashboards
-├── exec-scripts/        # Custom monitoring scripts
-└── docs/               # Tài liệu chi tiết
+collect-metrics/
+├── 📁 configs/                    # Cấu hình services
+│   ├── 📁 grafana/               # Grafana provisioning
+│   ├── 📁 prometheus/            # Prometheus configs
+│   └── 📁 telegraf/              # Telegraf configs
+├── 📁 dashboards/                # Grafana dashboards
+│   ├── 📁 system/               # Server monitoring
+│   ├── 📁 network/              # Network monitoring
+│   └── 📁 custom/               # Custom dashboards
+├── 📁 scripts/                   # Deployment scripts
+│   ├── deploy.sh                # Main deployment script
+│   ├── configure.sh             # Configuration script
+│   ├── backup.sh                # Backup script
+│   └── 📁 troubleshoot/         # Troubleshooting tools
+├── 📁 exec-scripts/             # Custom monitoring scripts
+├── 📁 docs/                     # Documentation
+├── 📁 data/                     # Persistent data (auto-created)
+├── docker-compose.yml           # Docker Compose configuration
+├── Dockerfile                   # Custom Telegraf image
+├── .env.example                 # Environment template
+├── checklist.md                 # Production deployment checklist
+└── README.md                    # This file
 ```
 
 ## 🚀 Triển Khai Nhanh
 
-### 1. Clone và chuẩn bị
+### Yêu Cầu Hệ Thống
+
+- **OS**: Linux (Ubuntu 20.04+ / CentOS 8+)
+- **RAM**: Tối thiểu 4GB, khuyến nghị 8GB+
+- **CPU**: Tối thiểu 2 cores, khuyến nghị 4 cores+
+- **Disk**: Tối thiểu 50GB, khuyến nghị 100GB+
+- **Docker**: Version 20.10+
+- **Docker Compose**: Version 2.0+
+
+### Bước 1: Clone và Chuẩn Bị
+
 ```bash
-git clone <repository>
-cd new_project
+# Clone repository
+git clone <repository-url>
+cd collect-metrics
+
+# Copy environment template
 cp .env.example .env
 ```
 
-### 2. Cấu hình
-Chỉnh sửa file `.env` theo nhu cầu:
-- Bật/tắt các modules
-- Cấu hình thông tin kết nối
-- Thiết lập credentials
+### Bước 2: Cấu Hình
 
-### 3. Deploy
+Chỉnh sửa file `.env` theo nhu cầu:
+
 ```bash
+# Core Configuration
+COMPOSE_PROJECT_NAME=monitoring
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=your_secure_password
+
+# Optional Modules
+ENABLE_SNMP=false              # Bật/tắt SNMP monitoring
+ENABLE_EXEC_SCRIPTS=false      # Bật/tắt custom scripts
+ENABLE_ALERTING=false          # Bật/tắt alerting
+ENABLE_PORTAINER=false         # Bật/tắt Portainer
+
+# SNMP Configuration (nếu ENABLE_SNMP=true)
+INFLUXDB_USERNAME=admin
+INFLUXDB_PASSWORD=your_influxdb_password
+INFLUXDB_ORG=your_org
+INFLUXDB_BUCKET=metrics
+INFLUXDB_TOKEN=your_token
+```
+
+### Bước 3: Triển Khai
+
+```bash
+# Triển khai hệ thống
 ./scripts/deploy.sh
 ```
 
-### 4. Restart/Redeploy (nếu cần)
-Để restart hoặc redeploy hệ thống:
+### Bước 4: Kiểm Tra
+
+Sau khi triển khai thành công, truy cập:
+
+- **Grafana**: http://localhost:3000 (admin/your_password)
+- **Prometheus**: http://localhost:9090
+- **Node Exporter**: http://localhost:9100
+
+## 🔧 Quản Lý Hệ Thống
+
+### Restart/Redeploy
+
 ```bash
 # Restart với cập nhật images
 ./scripts/restart.sh
@@ -86,53 +141,94 @@ UPDATE_IMAGES=false ./scripts/restart.sh
 CLEAN_VOLUMES=true CLEAN_IMAGES=true ./scripts/restart.sh
 ```
 
-### 5. Test Profiles (kiểm tra cấu hình)
-Để kiểm tra profiles được bật và services sẽ deploy:
+### Backup và Restore
+
 ```bash
+# Tạo backup
+./scripts/backup.sh
+
+# Restore từ backup (nếu cần)
+# Xem docs/BACKUP.md để biết chi tiết
+```
+
+### Kiểm Tra Trạng Thái
+
+```bash
+# Kiểm tra services
+docker-compose ps
+
+# Xem logs
+docker-compose logs [service-name]
+
+# Kiểm tra profiles được bật
 ./scripts/test-profiles.sh
 ```
 
-### 6. Test SNMP (nếu sử dụng SNMP monitoring)
-Để kiểm tra cấu hình và kết nối SNMP:
-```bash
-./scripts/test-snmp.sh
-```
-
-### 7. Fix Permissions (nếu cần)
-Nếu gặp lỗi permissions, chạy:
-```bash
-./scripts/fix-permissions.sh
-```
-
-## 🔧 Modules
+## 📊 Modules
 
 ### 1. Server Monitoring (Mặc định)
-- Sử dụng Prometheus + Node Exporter
-- Thu thập: CPU, Memory, Disk, Network, Load
-- Dashboard sẵn có cho Linux servers
+
+Giám sát servers Linux/Windows với Prometheus + Node Exporter:
+
+- **Metrics**: CPU, Memory, Disk, Network, Load, System info
+- **Ports**: 9090 (Prometheus), 9100 (Node Exporter)
+- **Dashboard**: System Overview, Server Metrics
 
 ### 2. Network Device Monitoring (Tùy chọn)
-- Kích hoạt: `ENABLE_SNMP=true`
-- Hỗ trợ: Cisco, Juniper, HP, Dell switches/routers
-- Thu thập: Interface stats, CPU, Memory
+
+Giám sát network devices qua SNMP:
+
+- **Kích hoạt**: `ENABLE_SNMP=true` trong `.env`
+- **Hỗ trợ**: Cisco, Juniper, HP, Dell switches/routers
+- **Metrics**: Interface stats, CPU, Memory, Temperature
+- **Ports**: 8086 (InfluxDB)
+- **Dashboard**: Network Devices Overview
 
 ### 3. Custom Monitoring (Tùy chọn)
-- Kích hoạt: `ENABLE_EXEC_SCRIPTS=true`
-- Viết scripts Python/Bash tùy chỉnh
-- Thu thập metrics từ API, databases, v.v.
 
-## 🔧 Troubleshooting
+Thu thập metrics tùy chỉnh qua exec scripts:
 
-### Lỗi Permissions
-Nếu gặp lỗi như:
-```
-mkdir: can't create directory '/var/lib/grafana/plugins': Permission denied
-GF_PATHS_DATA='/var/lib/grafana' is not writable.
-```
+- **Kích hoạt**: `ENABLE_EXEC_SCRIPTS=true` trong `.env`
+- **Scripts**: Python, Bash, hoặc bất kỳ executable nào
+- **Use cases**: API monitoring, database metrics, custom business logic
 
-**Giải pháp:**
+### 4. Alerting (Tùy chọn)
+
+Hệ thống cảnh báo thông minh:
+
+- **Kích hoạt**: `ENABLE_ALERTING=true` trong `.env`
+- **Components**: AlertManager, Prometheus rules
+- **Channels**: Email, Slack, Webhook
+- **Ports**: 9093 (AlertManager)
+
+## 🔐 Bảo Mật
+
+### Mật Khẩu và Credentials
+
+- Tất cả mật khẩu được generate tự động và lưu trong `.env`
+- Sử dụng mật khẩu mạnh cho production
+- Không commit file `.env` vào git
+
+### Network Security
+
+- Services chỉ expose ports cần thiết
+- Docker networks được isolate
+- Firewall rules được cấu hình tự động
+
+### Access Control
+
+- Grafana admin access được bảo vệ
+- Prometheus API có thể được bảo vệ với reverse proxy
+- InfluxDB token-based authentication
+
+## 🛠️ Troubleshooting
+
+### Lỗi Thường Gặp
+
+#### 1. Permission Errors
+
 ```bash
-# Chạy script fix permissions
+# Fix permissions
 ./scripts/fix-permissions.sh
 
 # Hoặc fix thủ công
@@ -140,76 +236,148 @@ sudo chown -R 472:472 ./data/grafana
 sudo chown -R 65534:65534 ./data/prometheus
 ```
 
-### Lỗi khác
-- Kiểm tra logs: `docker-compose logs [service-name]`
-- Restart services: `docker-compose restart [service-name]`
-- Rebuild: `docker-compose down && docker-compose up -d --build`
+#### 2. Port Conflicts
 
-## 📊 Dashboards
-
-### Có sẵn
-- **Server Overview**: Tổng quan servers Linux/Windows
-- **Network Devices**: Giám sát switches/routers
-- **Alert Dashboard**: Tổng hợp cảnh báo
-
-### Tùy chỉnh
-- Import dashboards từ Grafana Labs
-- Tạo dashboards theo yêu cầu riêng
-
-## 🔐 Bảo Mật
-
-- Mật khẩu mạnh tự động generate
-- HTTPS cho Grafana (optional)
-- Network isolation với Docker networks
-- Secrets management qua environment variables
-
-## 📈 Mở Rộng
-
-### Thêm servers mới
-1. Cài đặt node_exporter trên server mới
-2. Thêm target vào Prometheus config
-3. Reload Prometheus
-
-### Thêm network devices
-1. Enable SNMP trên device
-2. Thêm vào TELEGRAF_SNMP_HOSTS
-3. Restart Telegraf SNMP
-
-### Thêm custom metrics
-1. Viết script trong exec-scripts/
-2. Thêm vào telegraf-exec.conf
-3. Restart Telegraf Exec
-
-## 🛠️ Maintenance
-
-### Backup
 ```bash
-./scripts/backup.sh
+# Kiểm tra ports đang sử dụng
+netstat -tulpn | grep -E ':(3000|9090|9100|8086)'
+
+# Thay đổi ports trong .env nếu cần
+GRAFANA_PORT=3001
+PROMETHEUS_PORT=9091
 ```
 
-### Update
+#### 3. Docker Issues
+
 ```bash
-./scripts/update.sh
+# Restart Docker service
+sudo systemctl restart docker
+
+# Clean Docker system
+docker system prune -a
 ```
 
-### Monitoring Health
-- Grafana: http://localhost:3000
-- InfluxDB: http://localhost:8086
-- Prometheus: http://localhost:9090
+### Logs và Debugging
 
-## 📚 Tài Liệu
+```bash
+# Xem logs của tất cả services
+docker-compose logs
 
-- [Hướng dẫn triển khai](docs/DEPLOYMENT.md)
-- [Cấu hình chi tiết](docs/CONFIGURATION.md)
-- [Xử lý sự cố](docs/TROUBLESHOOTING.md)
+# Xem logs của service cụ thể
+docker-compose logs grafana
+docker-compose logs prometheus
 
-## 🤝 Hỗ Trợ
+# Follow logs real-time
+docker-compose logs -f [service-name]
+```
 
-- Email: support@example.com
-- Documentation: [Wiki](wiki-link)
-- Issues: [GitHub Issues](issues-link)
+### Health Checks
+
+```bash
+# Kiểm tra health của services
+docker-compose ps
+
+# Test endpoints
+curl http://localhost:3000/api/health  # Grafana
+curl http://localhost:9090/-/healthy   # Prometheus
+```
+
+## 📈 Mở Rộng Hệ Thống
+
+### Thêm Servers Mới
+
+1. **Cài đặt Node Exporter** trên server mới:
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install prometheus-node-exporter
+   
+   # CentOS/RHEL
+   sudo yum install prometheus2-node_exporter
+   ```
+
+2. **Thêm target** vào Prometheus config:
+   ```yaml
+   # configs/prometheus/targets/servers.yml
+   - targets: ['new-server:9100']
+     labels:
+       instance: 'new-server'
+       env: 'production'
+   ```
+
+3. **Reload Prometheus**:
+   ```bash
+   curl -X POST http://localhost:9090/-/reload
+   ```
+
+### Thêm Network Devices
+
+1. **Enable SNMP** trên device
+2. **Thêm vào cấu hình**:
+   ```bash
+   # Trong .env
+   TELEGRAF_SNMP_HOSTS=192.168.1.1,192.168.1.2
+   ```
+3. **Restart Telegraf**:
+   ```bash
+   docker-compose restart telegraf
+   ```
+
+### Thêm Custom Metrics
+
+1. **Tạo script** trong `exec-scripts/`:
+   ```python
+   # exec-scripts/custom_metric.py
+   import json
+   import time
+   
+   result = {
+       "measurement": "custom_metric",
+       "tags": {"host": "server1"},
+       "fields": {"value": 42}
+   }
+   print(json.dumps(result))
+   ```
+
+2. **Thêm vào Telegraf config**:
+   ```toml
+   # configs/telegraf/telegraf.conf
+   [[inputs.exec]]
+     commands = ["python3 /scripts/custom_metric.py"]
+     timeout = "5s"
+   ```
+
+3. **Restart Telegraf**:
+   ```bash
+   docker-compose restart telegraf
+   ```
+
+## 📚 Tài Liệu Chi Tiết
+
+- **[Hướng dẫn triển khai](docs/DEPLOYMENT.md)** - Chi tiết về deployment
+- **[Cấu hình nâng cao](docs/CONFIGURATION.md)** - Cấu hình chi tiết
+- **[Xử lý sự cố](docs/TROUBLESHOOTING.md)** - Troubleshooting guide
+- **[Production Checklist](checklist.md)** - Checklist cho production
+
+## 🤝 Đóng Góp
+
+1. Fork project
+2. Tạo feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Tạo Pull Request
+
+## 📄 License
+
+Project này được phân phối dưới MIT License. Xem file `LICENSE` để biết thêm chi tiết.
+
+## 🆘 Hỗ Trợ
+
+- **Email**: support@example.com
+- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Documentation**: [Wiki](https://github.com/your-repo/wiki)
 
 ---
+
 **Version**: 2.0.0  
-**License**: MIT  
+**Last Updated**: 2024  
 **Maintainer**: DevOps Team

@@ -26,12 +26,16 @@ set -a
 source "$PROJECT_ROOT/.env"
 set +a
 
-# Portainer directory
-echo "Deploying Portainer as separate stack..."
-mkdir -p "$PROJECT_ROOT/portainer/data"
+if [ "${ENABLE_PORTAINER:-false}" = "true" ]; then
+    # Portainer directory
+    echo "Deploying Portainer as separate stack..."
+    mkdir -p "$PROJECT_ROOT/portainer/data"
 
-# Use separate project name for Portainer to avoid orphan containers warning
-cd "$PROJECT_ROOT/portainer"
-COMPOSE_PROJECT_NAME="management" docker compose -f portainer-compose.yml up -d
+    # Use separate project name for Portainer to avoid orphan containers warning
+    cd "$PROJECT_ROOT/portainer"
+    COMPOSE_PROJECT_NAME="management" docker compose -f portainer-compose.yml up -d
 
-echo "Portainer deployed successfully as separate stack!"
+    echo "Portainer deployed successfully as separate stack!"
+else
+    echo -e "${YELLOW}DEPLOY_PORTAINER is not set to true. Skipping Portainer deployment.${NC}"
+fi

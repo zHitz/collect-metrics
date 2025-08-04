@@ -55,3 +55,6 @@ dashboards/*/*.json
 # Prometheus targets (keep examples)
 configs/prometheus/targets/*
 !configs/prometheus/targets/.gitkeep
+
+# Backlog
+backlog/*
