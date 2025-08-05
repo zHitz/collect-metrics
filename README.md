@@ -109,6 +109,15 @@ INFLUXDB_PASSWORD=your_influxdb_password
 INFLUXDB_ORG=your_org
 INFLUXDB_BUCKET=metrics
 INFLUXDB_TOKEN=your_token
+
+# Service Images (Flexible - có thể thay đổi toàn bộ image, không chỉ version)
+GRAFANA_IMAGE=grafana/grafana:12.2.0-16636675413
+PROMETHEUS_IMAGE=prom/prometheus:v3.5.0
+NODE_EXPORTER_IMAGE=prom/node-exporter:v1.9.0
+INFLUXDB_IMAGE=influxdb:2.7.0
+TELEGRAF_IMAGE=telegraf:1.27.0
+ALERTMANAGER_IMAGE=prom/alertmanager:v0.25.0
+PORTAINER_IMAGE=portainer/portainer-ce:lts
 ```
 
 ### Bước 3: Triển Khai

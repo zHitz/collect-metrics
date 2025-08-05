@@ -1,7 +1,7 @@
 services:
   # Portainer - Container Management
   portainer:
-    image: portainer/portainer-ce:${PORTAINER_VERSION:-lts}
+    image: ${PORTAINER_IMAGE:-portainer/portainer-ce:lts}
     container_name: ${COMPOSE_PROJECT_NAME:-management}-portainer
     restart: unless-stopped
     networks:

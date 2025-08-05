@@ -2,10 +2,13 @@ services:
   # ===============================================
   # Core Services (Always Enabled)
   # ===============================================
+  # SECURITY NOTE: Only Grafana exposes external ports
+  # All other services are internal-only for security
+  # ===============================================
   
-  # Grafana - Visualization
+  # Grafana - Visualization (Only external access point)
   grafana:
-    image: grafana/grafana:${GRAFANA_VERSION:-grafana:12.2.0-16636675413}
+    image: ${GRAFANA_IMAGE:-grafana/grafana:12.2.0-16636675413}
     container_name: ${COMPOSE_PROJECT_NAME}-grafana
     restart: unless-stopped
     networks:
@@ -44,13 +47,12 @@ services:
 
   # Prometheus - Metrics Collection
   prometheus:
-    image: prom/prometheus:${PROMETHEUS_VERSION:-v3.5.0}
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v3.5.0}
     container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-prometheus
     restart: unless-stopped
     networks:
       - monitoring
-    ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+    # Removed external port exposure - only internal access
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -81,13 +83,12 @@ services:
 
   # Node Exporter - Server Metrics
   node-exporter:
-    image: prom/node-exporter:${NODE_EXPORTER_VERSION:-v1.9.0}
+    image: ${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.9.0}
     container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-node-exporter
     restart: unless-stopped
     networks:
       - monitoring
-    ports:
-      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    # Removed external port exposure - only internal access
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -114,13 +115,12 @@ services:
 
   # InfluxDB - Time Series Database
   influxdb:
-    image: influxdb:${INFLUXDB_VERSION:-2.7.0}
+    image: ${INFLUXDB_IMAGE:-influxdb:2.7.0}
     container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-influxdb
     restart: unless-stopped
     networks:
       - monitoring
-    ports:
-      - "${INFLUXDB_PORT:-8086}:8086"
+    # Removed external port exposure - only internal access
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_USERNAME:-admin}
@@ -187,13 +187,12 @@ services:
 
   # AlertManager (Optional)
   alertmanager:
-    image: prom/alertmanager:${ALERTMANAGER_VERSION:-v0.25.0}
+    image: ${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.25.0}
     container_name: ${COMPOSE_PROJECT_NAME:-monitoring}-alertmanager
     restart: unless-stopped
     networks:
       - monitoring
-    ports:
-      - "${ALERTMANAGER_PORT:-9093}:9093"
+    # Removed external port exposure - only internal access
     volumes:
       - ./configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ./data/alertmanager:/alertmanager

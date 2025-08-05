@@ -130,9 +130,9 @@ check_images() {
     
     # Base images (always required)
     local base_images=(
-        "grafana/grafana:${GRAFANA_VERSION:-10.0.0}"
-        "prom/prometheus:${PROMETHEUS_VERSION:-v2.45.0}"
-        "prom/node-exporter:${NODE_EXPORTER_VERSION:-v1.6.0}"
+        "${GRAFANA_IMAGE:-grafana/grafana:10.0.0}"
+        "${PROMETHEUS_IMAGE:-prom/prometheus:v2.45.0}"
+        "${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.6.0}"
     )
     
     # Optional images (based on profiles)
@@ -140,13 +140,13 @@ check_images() {
     
     # Add InfluxDB if SNMP is enabled (InfluxDB is in snmp profile)
     if [ "${ENABLE_SNMP:-false}" = "true" ]; then
-        optional_images+=("influxdb:${INFLUXDB_VERSION:-2.7.0}")
-        optional_images+=("telegraf:${TELEGRAF_VERSION:-1.27.0}")
+        optional_images+=("${INFLUXDB_IMAGE:-influxdb:2.7.0}")
+        optional_images+=("${TELEGRAF_IMAGE:-telegraf:1.27.0}")
     fi
     
     # Add AlertManager if alerting is enabled
     if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
-        optional_images+=("prom/alertmanager:${ALERTMANAGER_VERSION:-v0.28.0}")
+        optional_images+=("${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.28.0}")
     fi
     
     # Combine all images
@@ -417,7 +417,7 @@ build_telegraf_if_needed() {
         
         # Build with quiet output
         docker build \
-            --build-arg TELEGRAF_VERSION="${TELEGRAF_VERSION:-1.27.0}" \
+            --build-arg TELEGRAF_IMAGE="${TELEGRAF_IMAGE:-telegraf:1.27.0}" \
             --tag "${COMPOSE_PROJECT_NAME:-monitoring}-telegraf" \
             --quiet \
             "$PROJECT_ROOT" >/dev/null 2>&1

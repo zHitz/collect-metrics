@@ -58,3 +58,6 @@ configs/prometheus/targets/*
 
 # Backlog
 backlog/*
+
+# TEST
+test/*

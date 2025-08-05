@@ -58,16 +58,16 @@ show_profile_config() {
     
     # Check basic profiles
     echo "Basic Monitoring (Always Enabled):"
-    echo "  ✅ Grafana: ${GRAFANA_VERSION:-10.0.0}"
-    echo "  ✅ Prometheus: ${PROMETHEUS_VERSION:-v2.45.0}"
-    echo "  ✅ Node Exporter: ${NODE_EXPORTER_VERSION:-v1.6.0}"
+    echo "  ✅ Grafana: ${GRAFANA_IMAGE:-grafana/grafana:10.0.0}"
+    echo "  ✅ Prometheus: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.45.0}"
+    echo "  ✅ Node Exporter: ${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.6.0}"
     echo ""
     
     # Check SNMP profile
     if [ "${ENABLE_SNMP:-false}" = "true" ]; then
         echo "🔹 SNMP Monitoring (ENABLED):"
-        echo "  ✅ InfluxDB: ${INFLUXDB_VERSION:-2.7.0}"
-        echo "  ✅ Telegraf SNMP: ${TELEGRAF_VERSION:-1.27.0}"
+        echo "  ✅ InfluxDB: ${INFLUXDB_IMAGE:-influxdb:2.7.0}"
+        echo "  ✅ Telegraf SNMP: ${TELEGRAF_IMAGE:-telegraf:1.27.0}"
         echo "  📍 SNMP Agents: ${TELEGRAF_SNMP_AGENTS:-Not configured}"
     else
         echo "🔹 SNMP Monitoring (DISABLED)"
@@ -77,7 +77,7 @@ show_profile_config() {
     # Check Exec Scripts profile
     if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ]; then
         echo "🔹 Custom Scripts (ENABLED):"
-        echo "  ✅ Telegraf Exec: ${TELEGRAF_VERSION:-1.27.0}"
+        echo "  ✅ Telegraf Exec: ${TELEGRAF_IMAGE:-telegraf:1.27.0}"
         echo "  📍 Scripts Directory: ${TELEGRAF_EXEC_SCRIPTS_PATH:-./exec-scripts}"
     else
         echo "🔹 Custom Scripts (DISABLED)"
@@ -87,7 +87,7 @@ show_profile_config() {
     # Check AlertManager profile
     if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
         echo "🔹 AlertManager (ENABLED):"
-        echo "  ✅ AlertManager: ${ALERTMANAGER_VERSION:-v0.25.0}"
+        echo "  ✅ AlertManager: ${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.25.0}"
         echo "  📧 Email Alerts: ${ALERT_EMAIL_ENABLED:-false}"
         echo "  💬 Slack Alerts: ${ALERT_SLACK_ENABLED:-false}"
     else
@@ -126,22 +126,22 @@ show_required_images() {
     echo "Required Docker Images:"
     
     # Base images
-    echo "  📦 grafana/grafana:${GRAFANA_VERSION:-10.0.0}"
-    echo "  📦 prom/prometheus:${PROMETHEUS_VERSION:-v2.45.0}"
-    echo "  📦 prom/node-exporter:${NODE_EXPORTER_VERSION:-v1.6.0}"
+    echo "  📦 ${GRAFANA_IMAGE:-grafana/grafana:10.0.0}"
+    echo "  📦 ${PROMETHEUS_IMAGE:-prom/prometheus:v2.45.0}"
+    echo "  📦 ${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.6.0}"
     
     # Optional images
     if [ "${ENABLE_SNMP:-false}" = "true" ]; then
-        echo "  📦 influxdb:${INFLUXDB_VERSION:-2.7.0}"
-        echo "  📦 telegraf:${TELEGRAF_VERSION:-1.27.0}"
+        echo "  📦 ${INFLUXDB_IMAGE:-influxdb:2.7.0}"
+        echo "  📦 ${TELEGRAF_IMAGE:-telegraf:1.27.0}"
     fi
     
     if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ] && [ "${ENABLE_SNMP:-false}" != "true" ]; then
-        echo "  📦 telegraf:${TELEGRAF_VERSION:-1.27.0}"
+        echo "  📦 ${TELEGRAF_IMAGE:-telegraf:1.27.0}"
     fi
     
     if [ "${ENABLE_ALERTMANAGER:-false}" = "true" ]; then
-        echo "  📦 prom/alertmanager:${ALERTMANAGER_VERSION:-v0.25.0}"
+        echo "  📦 ${ALERTMANAGER_IMAGE:-prom/alertmanager:v0.25.0}"
     fi
     echo ""
 }

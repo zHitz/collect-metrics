@@ -184,7 +184,7 @@ test_telegraf_config() {
     fi
     
     # Test Telegraf config syntax
-    if docker run --rm -v "$config_file:/etc/telegraf/telegraf.conf:ro" telegraf:${TELEGRAF_VERSION:-1.27.0} telegraf --test --config /etc/telegraf/telegraf.conf &> /dev/null; then
+    if docker run --rm -v "$config_file:/etc/telegraf/telegraf.conf:ro" ${TELEGRAF_IMAGE:-telegraf:1.27.0} telegraf --test --config /etc/telegraf/telegraf.conf &> /dev/null; then
         log_success "Telegraf SNMP configuration is valid"
     else
         log_error "Telegraf SNMP configuration has errors"

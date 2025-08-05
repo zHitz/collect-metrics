@@ -1,6 +1,6 @@
 # Dockerfile
-ARG TELEGRAF_VERSION=1.25.0
-FROM telegraf:${TELEGRAF_VERSION}
+ARG TELEGRAF_IMAGE=telegraf:1.27.0
+FROM ${TELEGRAF_IMAGE}
 
 # Cài đặt các gói bổ sung cho Debian-based (Ubuntu)
 RUN if grep -q 'ID=debian\|ID=ubuntu\|ID_LIKE=debian' /etc/os-release 2>/dev/null; then \
