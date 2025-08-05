@@ -104,44 +104,54 @@ check_env_file() {
 configure_telegraf_snmp() {
     if [ "${ENABLE_SNMP}" = "true" ]; then
         log_info "Configuring Telegraf SNMP..."
-        
-        # Check if TELEGRAF_SNMP_AGENTS is set
+
+        TEMPLATE="$PROJECT_ROOT/configs/telegraf/telegraf.conf.template"
+        OUTPUT="$PROJECT_ROOT/configs/telegraf/telegraf.conf"
+
+        if [ ! -f "$TEMPLATE" ]; then
+            log_error "TELEGRAF config template not found"
+            return 1
+        fi
+
+        # Copy template
+        cp "$TEMPLATE" "$OUTPUT"
+        log_info "Copied template to $OUTPUT"
+
+        # === Xử lý SNMP agents ===
         if [ -z "${TELEGRAF_SNMP_AGENTS:-}" ]; then
             log_warning "TELEGRAF_SNMP_AGENTS not set, using default"
             TELEGRAF_SNMP_AGENTS="router1:192.168.1.1:161:public,switch1:192.168.1.2:161:public"
         fi
-        
-        # Parse SNMP agents from environment variable
-        # Format: name:host:port:community,name:host:port:community
+
+        # Parse agents
         AGENTS_ARRAY=()
         IFS=',' read -ra AGENTS <<< "$TELEGRAF_SNMP_AGENTS"
         for agent in "${AGENTS[@]}"; do
             IFS=':' read -ra PARTS <<< "$agent"
             if [ ${#PARTS[@]} -eq 4 ]; then
-                # Format: "host:port"
                 AGENTS_ARRAY+=("\"${PARTS[1]}:${PARTS[2]}\"")
                 log_info "Added SNMP agent: ${PARTS[1]}:${PARTS[2]} (${PARTS[0]})"
             else
-                log_warning "Invalid SNMP agent format: $agent (expected: name:host:port:community)"
+                log_warning "Invalid SNMP agent format: $agent"
             fi
         done
-        
-        # Join array elements
-        if [ ${#AGENTS_ARRAY[@]} -gt 0 ]; then
-            AGENTS_STRING=$(IFS=','; echo "${AGENTS_ARRAY[*]}")
-            
-            # Update SNMP config file
-            sed -i "s/agents = \[.*\]/agents = [$AGENTS_STRING]/" "$PROJECT_ROOT/configs/telegraf/telegraf.conf"
-            
-            log_success "Telegraf SNMP configuration updated with ${#AGENTS_ARRAY[@]} agents"
-        else
-            log_error "No valid SNMP agents found"
-            return 1
-        fi
+
+        AGENTS_STRING=$(IFS=','; echo "${AGENTS_ARRAY[*]}")
+        sed -i "s|agents = \[.*\]|agents = [$AGENTS_STRING]|" "$OUTPUT"
+
+        # === Thay các biến SNMP khác ===
+        sed -i "s|\${TELEGRAF_SNMP_VERSION:-2}|${TELEGRAF_SNMP_VERSION:-2}|" "$OUTPUT"
+        sed -i "s|\${TELEGRAF_SNMP_COMMUNITY:-public}|${TELEGRAF_SNMP_COMMUNITY:-public}|" "$OUTPUT"
+        sed -i "s|\${TELEGRAF_SNMP_INTERVAL:-30s}|${TELEGRAF_SNMP_INTERVAL:-30s}|" "$OUTPUT"
+        sed -i "s|\${TELEGRAF_DEBUG:-false}|${TELEGRAF_DEBUG:-false}|" "$OUTPUT"
+        sed -i "s|\${TELEGRAF_QUIET:-false}|${TELEGRAF_QUIET:-false}|" "$OUTPUT"
+
+        log_success "Telegraf SNMP configuration completed"
     else
-        log_info "SNMP monitoring disabled, skipping Telegraf SNMP configuration"
+        log_info "SNMP monitoring disabled"
     fi
 }
+
 
 # Configure Prometheus targets
 configure_prometheus_targets() {
@@ -311,6 +321,8 @@ main() {
     check_env_file
     
     # Configure components based on settings
+
+    # Telegraf
     configure_telegraf_snmp
     configure_prometheus_targets
     validate_grafana_config

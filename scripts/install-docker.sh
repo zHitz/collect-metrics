@@ -158,7 +158,7 @@ main() {
     echo ""
     
     # Check if running as root
-    check_root
+    # check_root
     
     # Detect OS
     detect_os

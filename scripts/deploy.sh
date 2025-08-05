@@ -484,6 +484,7 @@ show_summary() {
         echo "    Password: ${INFLUXDB_PASSWORD}"
         echo "    Organization: ${INFLUXDB_ORG}"
         echo "    Bucket: ${INFLUXDB_BUCKET}"
+        echo "    Token: ${INFLUXDB_TOKEN}"
         echo ""
     fi    
     if [ "${ENABLE_EXEC_SCRIPTS:-false}" = "true" ]; then
@@ -493,7 +494,7 @@ show_summary() {
     fi
     
     echo "Next steps:"
-    echo "  1. Access and change Portainer password at https://localhost:${PORTAINER_PORT}"
+    echo "  1. Access and change Portainer password at https://localhost:${PORTAINER_PORT} if deployed using portainer"
     echo "  2. Access Grafana at http://localhost:${GRAFANA_PORT}"
     echo "  3. Configure additional monitoring targets"
     echo "  4. Import or create custom dashboards"
