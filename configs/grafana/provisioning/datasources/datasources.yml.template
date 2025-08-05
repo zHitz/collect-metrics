@@ -9,11 +9,11 @@ datasources:
     url: http://influxdb:8086
     jsonData:
       version: Flux
-      organization: myorg
-      defaultBucket: mybucket
+      organization: ${INFLUXDB_ORG}
+      defaultBucket: ${INFLUXDB_BUCKET}
       tlsSkipVerify: true
     secureJsonData:
-      token: 1e948ab7d4eae180ef0841e13ff1b7d615182680a48e5ef73baf33c0cb053e5f
+      token: ${INFLUXDB_TOKEN}
     isDefault: true
     editable: false
 

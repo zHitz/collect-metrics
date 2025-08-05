@@ -184,14 +184,16 @@ EOF
 # Validate Grafana datasource configuration
 validate_grafana_config() {
     log_info "Validating Grafana configuration..."
-    
-    # Process datasource template
-    DATASOURCE_FILE="$PROJECT_ROOT/configs/grafana/provisioning/datasources/datasources.yml"
-    if [ -f "$DATASOURCE_FILE" ]; then
-        # Replace environment variables
-        envsubst < "$DATASOURCE_FILE" > "$DATASOURCE_FILE.tmp"
-        mv "$DATASOURCE_FILE.tmp" "$DATASOURCE_FILE"
-        log_success "Grafana datasources configured"
+
+    TEMPLATE_FILE="$PROJECT_ROOT/configs/grafana/provisioning/datasources/datasources.yml.template"
+    OUTPUT_FILE="$PROJECT_ROOT/configs/grafana/provisioning/datasources/datasources.yml"
+
+    if [ -f "$TEMPLATE_FILE" ]; then
+        # Replace environment variables in template and output to final config
+        envsubst < "$TEMPLATE_FILE" > "$OUTPUT_FILE"
+        log_success "Grafana datasources configured from template"
+    else
+        log_error "Template file not found: $TEMPLATE_FILE"
     fi
 }
 

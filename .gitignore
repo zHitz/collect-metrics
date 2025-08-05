@@ -51,6 +51,7 @@ dashboards/*/*.json
 !dashboards/system/.gitkeep
 !dashboards/network/.gitkeep
 !dashboards/custom/.gitkeep
+!dashboards/system/server-monitoring.json
 
 # Prometheus targets (keep examples)
 configs/prometheus/targets/*
