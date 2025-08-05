@@ -67,7 +67,7 @@ check_env_file() {
     if [ -z "${INFLUXDB_PASSWORD:-}" ] || [[ "$INFLUXDB_PASSWORD" == "changeMe" ]]; then
         INFLUX_PASS=$(generate_password 20)
         sed -i "s/^INFLUXDB_PASSWORD=.*/INFLUXDB_PASSWORD=$INFLUX_PASS/" "$PROJECT_ROOT/.env"
-        echo "INFLUX_PASS: $INFLUX_PASS"
+        log_info "Generated new INFLUXDB_PASSWORD"
         update_env=true
     fi
 
@@ -75,16 +75,16 @@ check_env_file() {
     if [ -z "${GRAFANA_ADMIN_PASSWORD:-}" ] || [[ "$GRAFANA_ADMIN_PASSWORD" == "admin" ]]; then
         GRAFANA_PASS=$(generate_password 20)
         sed -i "s/^GRAFANA_ADMIN_PASSWORD=.*/GRAFANA_ADMIN_PASSWORD=$GRAFANA_PASS/" "$PROJECT_ROOT/.env"
-        echo "GRAFANA_PASS: $GRAFANA_PASS"
+        log_info "Generated new GRAFANA_ADMIN_PASSWORD"
         update_env=true
     fi
 
     # Check and generate INFLUXDB_TOKEN
     if [ -z "${INFLUXDB_TOKEN:-}" ] || [[ "$INFLUXDB_TOKEN" == "my-super-secret-auth-token" ]]; then
-        echo "Generating INFLUXDB_TOKEN"
+        log_info "Generating INFLUXDB_TOKEN"
         INFLUX_TOKEN=$(generate_token)
         sed -i "s/^INFLUXDB_TOKEN=.*/INFLUXDB_TOKEN=$INFLUX_TOKEN/" "$PROJECT_ROOT/.env"
-        echo "INFLUX_TOKEN: $INFLUX_TOKEN"
+        log_info "Generated new INFLUXDB_TOKEN"
         update_env=true
     fi
 

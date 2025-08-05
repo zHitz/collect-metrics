@@ -226,35 +226,35 @@ create_directories() {
     # Grafana needs user 472
     if [ -d "$PROJECT_ROOT/data/grafana" ]; then
         sudo chown -R 472:472 "$PROJECT_ROOT/data/grafana"
-        sudo chmod -R 755 "$PROJECT_ROOT/data/grafana"
-        log_info "Set Grafana permissions (user 472)"
+        sudo chmod -R 750 "$PROJECT_ROOT/data/grafana"
+        log_info "Set Grafana permissions (user 472, mode 750)"
     fi
     
     # InfluxDB needs user 472 (same as Grafana)
     if [ -d "$PROJECT_ROOT/data/influxdb" ]; then
         sudo chown -R 472:472 "$PROJECT_ROOT/data/influxdb"
-        sudo chmod -R 755 "$PROJECT_ROOT/data/influxdb"
-        log_info "Set InfluxDB data permissions (user 472)"
+        sudo chmod -R 750 "$PROJECT_ROOT/data/influxdb"
+        log_info "Set InfluxDB data permissions (user 472, mode 750)"
     fi
     
     if [ -d "$PROJECT_ROOT/data/influxdb-config" ]; then
         sudo chown -R 472:472 "$PROJECT_ROOT/data/influxdb-config"
-        sudo chmod -R 755 "$PROJECT_ROOT/data/influxdb-config"
-        log_info "Set InfluxDB config permissions (user 472)"
+        sudo chmod -R 750 "$PROJECT_ROOT/data/influxdb-config"
+        log_info "Set InfluxDB config permissions (user 472, mode 750)"
     fi
     
     # Prometheus needs user 65534 (nobody)
     if [ -d "$PROJECT_ROOT/data/prometheus" ]; then
         sudo chown -R 65534:65534 "$PROJECT_ROOT/data/prometheus"
-        sudo chmod -R 755 "$PROJECT_ROOT/data/prometheus"
-        log_info "Set Prometheus permissions (user 65534)"
+        sudo chmod -R 750 "$PROJECT_ROOT/data/prometheus"
+        log_info "Set Prometheus permissions (user 65534, mode 750)"
     fi
     
-    # Make configs readable by containers
+    # Make configs readable by containers but not world-readable
     if [ -d "$PROJECT_ROOT/configs" ]; then
-        sudo chmod -R 644 "$PROJECT_ROOT/configs"
-        sudo find "$PROJECT_ROOT/configs" -type d -exec chmod 755 {} \;
-        log_info "Set configs permissions (readable by containers)"
+        sudo chmod -R 640 "$PROJECT_ROOT/configs"
+        sudo find "$PROJECT_ROOT/configs" -type d -exec chmod 750 {} \;
+        log_info "Set configs permissions (mode 640 for files, 750 for directories)"
     fi
     
     log_success "Directories created and permissions set successfully"
@@ -476,12 +476,12 @@ show_summary() {
     echo "Credentials:"
     echo "  - Grafana:"
     echo "    Username: ${GRAFANA_ADMIN_USER}"
-    echo "    Password: ${GRAFANA_ADMIN_PASSWORD}"
+    echo "    Password: Check .env file (GRAFANA_ADMIN_PASSWORD)"
     echo ""
     if [ "${ENABLE_SNMP:-false}" = "true" ]; then
         echo "  - InfluxDB:"
         echo "    Username: ${INFLUXDB_USERNAME}"
-        echo "    Password: ${INFLUXDB_PASSWORD}"
+        echo "    Password: Check .env file (INFLUXDB_PASSWORD)"
         echo "    Organization: ${INFLUXDB_ORG}"
         echo "    Bucket: ${INFLUXDB_BUCKET}"
         echo ""
@@ -492,6 +492,11 @@ show_summary() {
         echo ""
     fi
     
+    echo "⚠️  IMPORTANT SECURITY NOTES:"
+    echo "  - Passwords are stored in .env file"
+    echo "  - Keep .env file secure and never commit to version control"
+    echo "  - Change default passwords immediately after deployment"
+    echo ""
     echo "Next steps:"
     echo "  1. Access and change Portainer password at https://localhost:${PORTAINER_PORT}"
     echo "  2. Access Grafana at http://localhost:${GRAFANA_PORT}"
@@ -512,34 +517,34 @@ main() {
     echo ""
     
     # Check prerequisites
-    check_prerequisites
+    check_prerequisites || { log_error "Prerequisites check failed"; exit 1; }
     
     # Cleanup existing containers
-    cleanup_existing
+    cleanup_existing || { log_error "Cleanup failed"; exit 1; }
     
     # Show enabled profiles
     show_profiles
     
     # Check and pull Docker images
-    check_images
+    check_images || { log_error "Image check failed"; exit 1; }
     
     # Create directories
-    create_directories
+    create_directories || { log_error "Directory creation failed"; exit 1; }
     
     # Generate configurations
-    generate_configs
+    generate_configs || { log_error "Configuration generation failed"; exit 1; }
     
     # Validate configuration
-    validate_config
+    validate_config || { log_error "Configuration validation failed"; exit 1; }
     
     # Deploy services
-    deploy_services
+    deploy_services || { log_error "Service deployment failed"; exit 1; }
     
     # Deploy Portainer
-    deploy_portainer
+    deploy_portainer || { log_error "Portainer deployment failed"; exit 1; }
     
     # Import dashboards
-    import_dashboards
+    import_dashboards || { log_error "Dashboard import failed"; exit 1; }
     
     # Show summary
     show_summary
