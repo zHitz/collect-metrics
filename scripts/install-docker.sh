@@ -57,9 +57,19 @@ detect_os() {
 install_docker() {
     log_info "Installing Docker using official installation method..."
     
+    log_warning "⚠️  SECURITY WARNING: This script downloads and executes code from the internet."
+    log_warning "For production environments, consider:"
+    log_warning "  - Using your OS package manager instead"
+    log_warning "  - Verifying the script manually before execution"
+    log_warning "  - Using Docker's official GPG keys to verify packages"
+    
     # Download Docker installation script
     log_info "Downloading Docker installation script..."
     curl -fsSL https://get.docker.com -o get-docker.sh
+    
+    # Optional: Display script info for review
+    log_info "Script downloaded. Size: $(wc -c < get-docker.sh) bytes"
+    log_info "You can review the script before execution: less get-docker.sh"
     
     # Make script executable
     chmod +x get-docker.sh
