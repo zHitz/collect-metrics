@@ -42,7 +42,8 @@ Thumbs.db
 # Custom scripts (keep examples only)
 exec-scripts/*
 !exec-scripts/examples/
-!exec-scripts/cisco/
+!exec-scripts/cisco-sg/
+!exec-scripts/cisco-business-220series/
 !exec-scripts/hillstone/
 !exec-scripts/README.md
 

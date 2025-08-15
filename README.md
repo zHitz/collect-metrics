@@ -46,6 +46,9 @@ collect-metrics/
 │   ├── 📁 grafana/               # Grafana provisioning
 │   ├── 📁 prometheus/            # Prometheus configs
 │   └── 📁 telegraf/              # Telegraf configs
+│       ├── telegraf.conf         # Main Telegraf config
+│       ├── cisco-business-220series.conf # Cisco Business 220 config
+│       └── telegraf.conf.template # Template config
 ├── 📁 dashboards/                # Grafana dashboards
 │   ├── 📁 system/               # Server monitoring
 │   ├── 📁 network/              # Network monitoring
@@ -56,6 +59,13 @@ collect-metrics/
 │   ├── backup.sh                # Backup script
 │   └── 📁 troubleshoot/         # Troubleshooting tools
 ├── 📁 exec-scripts/             # Custom monitoring scripts
+│   ├── 📁 cisco-business-220series/ # Cisco Business 220 monitoring
+│   │   ├── device_cisco.py      # SSH-based monitoring script
+│   │   └── .env                 # Device credentials
+│   ├── 📁 cisco-sg/             # Cisco SG series
+│   ├── 📁 hillstone/            # Hillstone devices
+│   ├── 📁 examples/             # Example scripts
+│   └── README.md                # Scripts documentation
 ├── 📁 docs/                     # Documentation
 ├── 📁 data/                     # Persistent data (auto-created)
 ├── docker-compose.yml           # Docker Compose configuration
@@ -75,6 +85,8 @@ collect-metrics/
 - **Disk**: Tối thiểu 50GB, khuyến nghị 100GB+
 - **Docker**: Version 20.10+
 - **Docker Compose**: Version 2.0+
+- **Python**: Python 3.6+ (cho exec scripts)
+- **Network**: SSH access tới network devices (nếu sử dụng SSH monitoring)
 
 ### Bước 1: Clone và Chuẩn Bị
 
@@ -185,13 +197,23 @@ Giám sát servers Linux/Windows với Prometheus + Node Exporter:
 
 ### 2. Network Device Monitoring (Tùy chọn)
 
-Giám sát network devices qua SNMP:
+Giám sát network devices qua SNMP và SSH:
 
 - **Kích hoạt**: `ENABLE_SNMP=true` trong `.env`
 - **Hỗ trợ**: Cisco, Juniper, HP, Dell switches/routers
 - **Metrics**: Interface stats, CPU, Memory, Temperature
 - **Ports**: 8086 (InfluxDB)
 - **Dashboard**: Network Devices Overview
+
+#### Cisco Business 220 Series Support
+
+Hỗ trợ đặc biệt cho Cisco Business 220 series switches:
+
+- **Protocol**: SSH với pexpect (vượt qua các vấn đề SSH protocol)
+- **Authentication**: Interactive login với welcome screen handling
+- **Metrics**: CPU utilization (5-minute average), Memory usage (Linux-style, excluding buffers/cache)
+- **Configuration**: File `.env` trong `exec-scripts/cisco-business-220series/`
+- **Measurement**: `switch_sys` với tags `metric_type=cpu|memory`
 
 ### 3. Custom Monitoring (Tùy chọn)
 
@@ -266,6 +288,24 @@ sudo systemctl restart docker
 docker system prune -a
 ```
 
+#### 4. Cisco Business 220 Series SSH Issues
+
+```bash
+# Cài đặt pexpect (nếu chưa có)
+pip3 install pexpect
+
+# Hoặc sử dụng package manager
+apt install python3-pexpect  # Ubuntu/Debian
+yum install python3-pexpect  # CentOS/RHEL
+
+# Test SSH connection thủ công
+ssh admin@switch_ip
+
+# Kiểm tra script trực tiếp
+cd exec-scripts/cisco-business-220series
+python3 device_cisco.py
+```
+
 ### Logs và Debugging
 
 ```bash
@@ -320,6 +360,8 @@ curl http://localhost:9090/-/healthy   # Prometheus
 
 ### Thêm Network Devices
 
+#### SNMP Devices (Chung)
+
 1. **Enable SNMP** trên device
 2. **Thêm vào cấu hình**:
    ```bash
@@ -329,6 +371,32 @@ curl http://localhost:9090/-/healthy   # Prometheus
 3. **Restart Telegraf**:
    ```bash
    docker-compose restart telegraf
+   ```
+
+#### Cisco Business 220 Series
+
+1. **Enable SSH** trên switch và tạo user có enable privileges
+2. **Cấu hình credentials**:
+   ```bash
+   # Tạo file exec-scripts/cisco-business-220series/.env
+   CISCO_HOST_1=10.10.22.11
+   CISCO_USERNAME_1=admin
+   CISCO_PASSWORD_1=your_password
+   CISCO_ENABLE_PASSWORD_1=your_enable_password
+   
+   CISCO_HOST_2=10.10.22.12
+   CISCO_USERNAME_2=admin
+   CISCO_PASSWORD_2=your_password
+   CISCO_ENABLE_PASSWORD_2=your_enable_password
+   ```
+3. **Enable exec scripts** trong main `.env`:
+   ```bash
+   ENABLE_EXEC_SCRIPTS=true
+   ```
+4. **Deploy Telegraf config**:
+   ```bash
+   cp configs/telegraf/cisco-business-220series.conf /etc/telegraf/telegraf.d/
+   systemctl restart telegraf
    ```
 
 ### Thêm Custom Metrics

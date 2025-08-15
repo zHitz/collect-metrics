@@ -28,6 +28,7 @@ RUN if grep -q 'ID=debian\|ID=ubuntu\|ID_LIKE=debian' /etc/os-release 2>/dev/nul
         \
         pip3 install --upgrade pip && \
         pip3 install \
+            pexpect \
             paramiko \
             cryptography \
             bcrypt \
